@@ -1,0 +1,28 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { HealthBattery } from './src/components/HealthBattery';
+import { analyzeGutHealth } from './src/lib/StomachEngine';
+
+export default function App() {
+  const [score, setScore] = useState(88);
+
+  const runFullTriage = () => {
+    // Simulated Triage: In a real demo, this pulls from the Mic/Camera
+    const result = analyzeGutHealth([0.9, 0.8, 0.9], 'O');
+    if (result.alert === "Lectin Agglutination Risk") {
+      setScore(42); // Drop the battery live on screen
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ color: '#FFD700', fontSize: 24, marginBottom: 20 }}>BIORACLE V12</Text>
+      <HealthBattery score={score} />
+      <TouchableOpacity 
+        onPress={runFullTriage}
+        style={{ marginTop: 40, backgroundColor: '#FFD700', padding: 20, borderRadius: 50 }}>
+        <Text style={{ fontWeight: 'bold' }}>ACTIVATE CLAIM 12</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
