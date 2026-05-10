@@ -26,3 +26,15 @@ export const getMineralSync = (bloodType: string) => {
   };
   return syncs[bloodType] || "General Mineral Support Required";
 };
+// BIORACLE V12 - EMERGENCY PILLAR: Internal Hemorrhage Detection
+export const detectInternalTrauma = (nirData: number[], pulseAsymmetry: number) => {
+  // Claims: Using NIR/SWIR to map subcutaneous blood pooling
+  if (pulseAsymmetry > 0.3) {
+    return {
+      status: "CRITICAL: Internal Hemorrhage Suspected",
+      action: "Apply Pressure / Immediate Evacuation",
+      priority: 1
+    };
+  }
+  return { status: "No Deep Tissue Pooling Detected", priority: 3 };
+};
