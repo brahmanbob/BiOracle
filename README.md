@@ -24,3 +24,4 @@ BiOracle V12: The Sovereign Health Oracle
 ​Engine: React Native / TypeScript
 ​Hardware Hooks: Camera (rPPG), Microphone (Acoustics), Haptics (Rife)
 ​Deployment: Expo Go / Sovereign Vault (GitHub)
+The method of utilizing a standard mobile communications device's internal electromagnetic and pressure sensors to stabilize biological data against synthetic device radiation and external atmospheric shifts."
