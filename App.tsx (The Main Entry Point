@@ -1,28 +1,87 @@
+
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
 import { HealthBattery } from './src/components/HealthBattery';
 import { analyzeGutHealth } from './src/lib/StomachEngine';
 
 export default function App() {
   const [score, setScore] = useState(88);
+  const [message, setMessage] = useState("SYSTEM READY");
 
   const runFullTriage = () => {
-    // Simulated Triage: In a real demo, this pulls from the Mic/Camera
+    // 1. Simulation of the S21 Mic picking up Gut Turbulence
+    // 2. Cross-referencing the 'O' Blood Type Logic
     const result = analyzeGutHealth([0.9, 0.8, 0.9], 'O');
+    
     if (result.alert === "Lectin Agglutination Risk") {
-      setScore(42); // Drop the battery live on screen
+      setScore(42); // Physically drops the gold battery level
+      setMessage("ALARM: LECTIN SPIKE DETECTED");
+      
+      // Haptic feedback specifically for the S21
+      Vibration.vibrate([0, 500, 100, 500]); 
     }
   };
 
+  const resetSystem = () => {
+    setScore(88);
+    setMessage("SYSTEM READY");
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: '#FFD700', fontSize: 24, marginBottom: 20 }}>BIORACLE V12</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>BIORACLE V12</Text>
+      
       <HealthBattery score={score} />
-      <TouchableOpacity 
-        onPress={runFullTriage}
-        style={{ marginTop: 40, backgroundColor: '#FFD700', padding: 20, borderRadius: 50 }}>
-        <Text style={{ fontWeight: 'bold' }}>ACTIVATE CLAIM 12</Text>
+      
+      <Text style={styles.statusText}>{message}</Text>
+
+      <TouchableOpacity style={styles.button} onPress={runFullTriage}>
+        <Text style={styles.buttonText}>ACTIVATE CLAIM 12</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={{marginTop: 30}} onPress={resetSystem}>
+        <Text style={{color: '#444', letterSpacing: 1}}>RESET BIO-BASELINE</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  title: {
+    color: '#FFD700',
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 5,
+    marginBottom: 40,
+  },
+  statusText: {
+    color: '#fff',
+    marginTop: 20,
+    fontSize: 16,
+    fontWeight: '300',
+    textAlign: 'center'
+  },
+  button: {
+    marginTop: 50,
+    backgroundColor: '#FFD700',
+    paddingVertical: 18,
+    paddingHorizontal: 50,
+    borderRadius: 40,
+    shadowColor: '#FFD700',
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  buttonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+});
