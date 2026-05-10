@@ -90,7 +90,14 @@ struct HealthBatteryView: View {
                                                 ]),
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
-                                            ),
+                   // This hooks the Microphone to the Battery
+const startGutScan = async () => {
+  // 1. Activate S21 Microphone
+  // 2. Run StomachEngine.ts logic
+  // 3. If "Lectin Alert" is found...
+  // 4. Drop Battery from 88% to 42% + Turn it RED.
+};
+                         ),
                                             style: StrokeStyle(
                                                 lineWidth: 12,
                                                 lineCap: .round
