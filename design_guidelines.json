@@ -1,0 +1,114 @@
+{
+  "theme_and_archetype": {
+    "domain": "Biometric Health Monitor",
+    "theme": "Dark",
+    "archetype": "Archetype 5 (Jewel & Luxury) - Custom Variant: Esoteric Biotech / Sovereign Alchemical",
+    "core_aesthetic": "Gold-Glow Battery on Obsidian Black. Sacred geometry hints, gold filigree, occult-meets-medical, monospace data readouts. The UI feels like a sovereign relic."
+  },
+  "typography": {
+    "primary_heading_font": "Cormorant Garamond",
+    "fallback_heading_font": "serif",
+    "data_body_font": "JetBrains Mono",
+    "fallback_data_font": "monospace",
+    "rules": {
+      "h1": "text-4xl sm:text-5xl font-light tracking-tighter text-[#D4AF37] uppercase",
+      "h2": "text-2xl sm:text-3xl font-medium tracking-tight text-white",
+      "h3": "text-xl font-normal tracking-wide text-white/80",
+      "data_labels": "text-xs uppercase tracking-[0.2em] text-[#D4AF37]/70 font-mono",
+      "data_values": "text-lg sm:text-xl font-mono text-[#D4AF37] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]"
+    }
+  },
+  "color_palette": {
+    "background": {
+      "obsidian_base": "#050505",
+      "obsidian_surface": "#111111",
+      "glass_surface": "rgba(255, 255, 255, 0.03)"
+    },
+    "accents": {
+      "gold_glow": "#D4AF37",
+      "gold_bright": "#FFDF00",
+      "gold_dim": "#AA8C2C",
+      "blood_red": "#8B0000",
+      "critical_glow": "#FF3B30",
+      "amber_stagnation": "#FF8C00"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "gold": "#D4AF37"
+    },
+    "borders": {
+      "gold_subtle": "rgba(212, 175, 55, 0.2)",
+      "gold_active": "rgba(212, 175, 55, 0.6)"
+    }
+  },
+  "layout_and_spacing": {
+    "strategy": "Mobile-First Dense Dashboard (Samsung S21 focus ~360x800). Use 'p-4' to 'p-6' internal padding on containers. Stack sections vertically.",
+    "grid_system": {
+      "mobile": "grid-cols-1 gap-4",
+      "tablet_desktop_fallback": "md:grid-cols-2 lg:grid-cols-3 gap-6"
+    },
+    "surface_styles": {
+      "relic_card": "bg-[#111111] backdrop-blur-xl border border-[#D4AF37]/20 rounded-sm shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
+      "glass_panel": "bg-white/[0.02] backdrop-blur-md border-b border-[#D4AF37]/10"
+    }
+  },
+  "motion_and_interactions": {
+    "hover_states": "Subtle border glow increase: hover:border-[#D4AF37]/60 hover:shadow-[0_0_15px_rgba(212,175,55,0.3)] transition-all duration-300",
+    "animations": {
+      "battery_pulse": "Slow ease-in-out breathing effect on the battery glow when optimal. Rapid sharp pulsing when critical (red).",
+      "waveform_active": "Staggered height changes for acoustic scanner to simulate live frequency monitoring.",
+      "fade_in": "Framer motion staggered fade-in for data elements."
+    }
+  },
+  "components": {
+    "health_battery_ui": {
+      "type": "Custom HTML/Tailwind",
+      "description": "Central vertical cylinder. Relic-like container with gold borders. Inner fill element expands vertically. Background color and box-shadow shift from #D4AF37 (Gold) to #FF3B30 (Red) based on the 0-100% score.",
+      "styles": "h-64 w-16 border border-[#D4AF37]/40 relative overflow-hidden flex flex-col justify-end",
+      "fill_styles": "w-full transition-all duration-1000 ease-in-out bg-gradient-to-t from-[#AA8C2C] to-[#FFDF00] shadow-[0_0_20px_#D4AF37]"
+    },
+    "stomach_acoustic_scanner": {
+      "type": "Custom Component",
+      "description": "A visualization of audio waveforms. Use a row of vertical thin divs with dynamically animating heights.",
+      "interaction": "Displays text result (Lectin Inflammation / MMC Stagnation / Optimal) using JetBrains Mono font."
+    },
+    "fingerprint_abo_logic": {
+      "type": "Action Card",
+      "description": "Icon-driven upload area (use Lucide 'Fingerprint' icon). Gold text readout. Emphasize looping sacred geometric circles behind the fingerprint icon.",
+      "layout": "Flex column, center aligned, bordered box with a subtle gold glow."
+    },
+    "emergency_triage": {
+      "type": "Data Panel",
+      "description": "Bento style mini-grid containing 'Vascular Asymmetry' and other metrics. Heavily monospaced, stark high-contrast look.",
+      "layout": "Grid cols-2 gap-2 p-4 bg-black border border-[#D4AF37]/20"
+    },
+    "emf_stealth_mode": {
+      "type": "Status Indicator",
+      "description": "Small header or footer widget showing RSSI (signal bars) and a text indicator 'SHIELD: ACTIVE'.",
+      "styles": "flex items-center gap-2 text-xs font-mono text-[#A1A1AA] mt-4"
+    }
+  },
+  "media_assets": {
+    "images": [
+      {
+        "category": "texture_overlay",
+        "description": "Dark obsidian gold texture used for subtle background grain or container overlay.",
+        "url": "https://images.unsplash.com/photo-1643324896137-f0928e76202a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHwxfHxkYXJrJTIwb2JzaWRpYW4lMjBnb2xkJTIwdGV4dHVyZXxlbnwwfHx8fDE3Nzg0ODQxMjh8MA&ixlib=rb-4.1.0&q=85",
+        "usage": "Use with mix-blend-overlay and opacity-10 on the main body or specific relic cards to break flatness."
+      }
+    ],
+    "icons": {
+      "library": "lucide-react",
+      "recommendations": ["Fingerprint", "Activity", "Radio", "ShieldAlert", "HeartPulse", "Waves"]
+    }
+  },
+  "implementation_instructions_to_main_agent": [
+    "Strictly follow the mobile-first focus. Target viewport is ~360x800.",
+    "Do NOT use 'Inter' or 'Space Grotesk'. Import 'Cormorant Garamond' and 'JetBrains Mono' via Google Fonts.",
+    "Ensure all interactive elements have data-testid attributes.",
+    "Build the Health Battery entirely with Tailwind CSS (divs) to allow custom fluid animations of the height and drop-shadows. No third-party charting tools for the battery.",
+    "The UI should feel like a medical/esoteric instrument, NOT a standard SaaS dashboard. Rely heavily on 1px borders, uppercase monospace labels, and high-contrast text.",
+    "If wrapping in Framer Motion, make sure grid items are correct direct children."
+  ]
+}
