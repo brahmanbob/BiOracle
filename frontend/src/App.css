@@ -1,34 +1,79 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+body {
+  background: #050505;
+  color: #fff;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.App {
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.App-link {
-    color: #61dafb;
+/* Battery breathing glow */
+@keyframes batteryPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}
+.animate-battery-pulse {
+  animation: batteryPulse 3s ease-in-out infinite;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Slow rotating sacred ring */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
+.animate-spin-slow {
+  animation: spinSlow 24s linear infinite;
+}
+
+/* Range slider gold */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 24px;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgba(212, 175, 55, 0.25);
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  background: #d4af37;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #d4af37;
+  margin-top: -6px;
+  cursor: pointer;
+}
+input[type='range']::-moz-range-track {
+  height: 2px;
+  background: rgba(212, 175, 55, 0.25);
+}
+input[type='range']::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  background: #d4af37;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #d4af37;
+  cursor: pointer;
+}
+
+/* Selection color */
+::selection {
+  background: #d4af37;
+  color: #050505;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.4); border-radius: 4px; }
