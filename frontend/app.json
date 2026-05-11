@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "BiOracle",
+    "slug": "bioracle",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0d"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.brahmanbob.bioracle",
+      "infoPlist": {
+        "NSCameraUsageDescription": "BiOracle uses the rear camera and flash to perform PPG (Photoplethysmography) scans for vascular asymmetry detection.",
+        "NSMicrophoneUsageDescription": "BiOracle uses the microphone to perform stomach acoustic analysis for digestive signal triage.",
+        "NSMotionUsageDescription": "BiOracle uses the magnetometer to detect EMF / synthetic interference near the device."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0d"
+      },
+      "package": "com.brahmanbob.bioracle",
+      "permissions": [
+        "CAMERA",
+        "FLASHLIGHT",
+        "RECORD_AUDIO",
+        "MAGNETOMETER",
+        "HIGH_SAMPLING_RATE_SENSORS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow BiOracle to access your camera for PPG scanning (rear camera + flash)."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow BiOracle to access your microphone for stomach acoustic analysis."
+        }
+      ]
+    ],
+    "extra": {
+      "sensors": {
+        "camera": "expo-camera",
+        "microphone": "expo-av",
+        "magnetometer": "expo-sensors"
+      },
+      "crackRoadmap": {
+        "crack1": "Shell scaffold: SovereignLogic, Health Battery, Triage Dashboard",
+        "crack2": "Wire S21 rear camera + flash for PPG, microphone for stomach acoustic, magnetometer for EMF",
+        "crack3": "Gold-on-Obsidian PDF generator with QR ledger link"
+      }
+    }
+  },
+  "dependencies": {
+    "expo": "~51.0.0",
+    "expo-av": "~14.0.0",
+    "expo-camera": "~15.0.0",
+    "expo-sensors": "~13.0.0",
+    "expo-status-bar": "~1.12.0",
+    "react": "18.2.0",
+    "react-native": "0.74.0"
+  }
+}

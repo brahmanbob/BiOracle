@@ -1,0 +1,406 @@
+/* ================================================================
+   BiOracle — Obsidian & Gold theme
+   ================================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap");
+
+:root {
+  --obsidian-0: #050507;
+  --obsidian-1: #0a0a0d;
+  --obsidian-2: #131318;
+  --obsidian-3: #1c1c24;
+  --obsidian-edge: #2a2a35;
+
+  --gold-deep: #8a6a16;
+  --gold-core: #c89b2a;
+  --gold-mid: #d4af37;
+  --gold-bright: #ffd966;
+  --gold-glow: rgba(255, 217, 102, 0.55);
+
+  --signal-red: #ff3b3b;
+  --signal-amber: #f5a623;
+  --signal-jade: #2fbf71;
+
+  --font-serif: "Cormorant Garamond", "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(ellipse at 50% 0%, #15151c 0%, var(--obsidian-0) 65%);
+  color: #e8e4d4;
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.85  0 0 0 0 0.7  0 0 0 0 0.2  0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
+}
+
+/* ---------- Typography ---------- */
+.bo-serif { font-family: var(--font-serif); letter-spacing: 0.02em; }
+.bo-mono  { font-family: var(--font-mono); }
+.bo-gold  { color: var(--gold-mid); }
+.bo-gold-bright { color: var(--gold-bright); }
+
+h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold-bright); margin: 0; }
+
+/* ---------- App shell ---------- */
+.bo-app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 28px 22px 80px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.bo-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--obsidian-edge);
+  padding-bottom: 18px;
+  margin-bottom: 24px;
+}
+
+.bo-header .sigil {
+  font-family: var(--font-serif);
+  font-size: 11px;
+  letter-spacing: 0.5em;
+  color: var(--gold-deep);
+  text-transform: uppercase;
+}
+
+.bo-header h1 {
+  font-size: 36px;
+  line-height: 1.1;
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-core) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bo-header .tagline {
+  font-size: 11px;
+  color: #8a8475;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* ---------- Health Battery ---------- */
+.bo-battery-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 0 18px;
+}
+
+.bo-battery {
+  position: relative;
+  width: 220px;
+  height: 320px;
+  filter: drop-shadow(0 0 18px var(--gold-glow));
+}
+
+.bo-battery svg { width: 100%; height: 100%; display: block; }
+
+.bo-battery .fill-bar {
+  transition: height 0.6s ease;
+}
+
+.bo-battery .pulse-ring {
+  transform-origin: 50% 50%;
+  animation-name: bo-pulse;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bo-pulse {
+  0%   { transform: scale(0.94); opacity: 0.85; }
+  35%  { transform: scale(1.0);  opacity: 1;    }
+  60%  { transform: scale(0.97); opacity: 0.6;  }
+  100% { transform: scale(0.94); opacity: 0.85; }
+}
+
+.bo-battery-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-family: var(--font-mono);
+}
+
+.bo-battery-readout .pct {
+  font-size: 42px;
+  font-weight: 500;
+  color: var(--gold-bright);
+  letter-spacing: 0.05em;
+}
+
+.bo-battery-readout .bpm {
+  font-size: 14px;
+  color: #c2bca4;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.bo-battery-state {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-mid);
+}
+
+/* ---------- Signal cards ---------- */
+.bo-dashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+@media (min-width: 560px) {
+  .bo-dashboard { grid-template-columns: 1fr 1fr; }
+}
+
+.bo-card {
+  background: linear-gradient(160deg, var(--obsidian-2) 0%, var(--obsidian-1) 100%);
+  border: 1px solid var(--obsidian-edge);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bo-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--gold-deep), transparent 40%, transparent 60%, var(--gold-deep));
+  -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.bo-card .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.bo-card .head .label {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  color: var(--gold-bright);
+  letter-spacing: 0.06em;
+}
+
+.bo-card .head .channel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: #6b6555;
+  text-transform: uppercase;
+}
+
+.bo-card .value {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 500;
+  color: #f0eadb;
+  letter-spacing: 0.04em;
+}
+
+.bo-card .unit {
+  font-size: 12px;
+  color: #8a8475;
+  margin-left: 6px;
+  letter-spacing: 0.15em;
+}
+
+.bo-card .bar {
+  height: 4px;
+  background: var(--obsidian-3);
+  border-radius: 2px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.bo-card .bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright));
+  transition: width 0.5s ease;
+}
+
+.bo-card .footnote {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: #6b6555;
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+
+.bo-card.severity-elevated .bar > span { background: linear-gradient(90deg, var(--gold-mid), var(--signal-amber)); }
+.bo-card.severity-critical .bar > span { background: linear-gradient(90deg, var(--signal-amber), var(--signal-red)); }
+.bo-card.severity-critical { border-color: rgba(255, 59, 59, 0.35); }
+.bo-card.severity-critical .head .label { color: var(--signal-red); }
+
+/* ---------- Slider (placeholder for PPG in Crack #2) ---------- */
+.bo-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  margin-top: 14px;
+  height: 4px;
+  background: var(--obsidian-3);
+  border-radius: 2px;
+  outline: none;
+}
+.bo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--gold-bright), var(--gold-deep));
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+.bo-slider::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; border: none;
+  background: radial-gradient(circle at 30% 30%, var(--gold-bright), var(--gold-deep));
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+/* ---------- Triage banner ---------- */
+.bo-verdict {
+  margin-top: 28px;
+  padding: 20px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--obsidian-edge);
+  background:
+    linear-gradient(160deg, rgba(212, 175, 55, 0.06), transparent 60%),
+    var(--obsidian-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bo-verdict .level {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.bo-verdict .score {
+  font-family: var(--font-mono);
+  color: #c2bca4;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+}
+
+.bo-verdict .directive {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.45;
+  color: #ece5cf;
+}
+
+.bo-verdict.level-critical, .bo-verdict.level-sovereign-override {
+  border-color: rgba(255, 59, 59, 0.45);
+  box-shadow: 0 0 24px rgba(255, 59, 59, 0.18);
+}
+.bo-verdict.level-critical .level,
+.bo-verdict.level-sovereign-override .level { color: var(--signal-red); }
+.bo-verdict.level-elevated .level { color: var(--signal-amber); }
+.bo-verdict.level-monitor  .level { color: var(--gold-mid); }
+.bo-verdict.level-stable   .level { color: var(--signal-jade); }
+
+/* ---------- Buttons ---------- */
+.bo-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 12px 22px;
+  background: linear-gradient(180deg, var(--gold-mid), var(--gold-deep));
+  color: var(--obsidian-0);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 0 14px var(--gold-glow);
+}
+.bo-btn:hover { transform: translateY(-1px); box-shadow: 0 0 22px var(--gold-glow); }
+.bo-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.bo-btn.ghost {
+  background: transparent;
+  color: var(--gold-bright);
+  border: 1px solid var(--gold-deep);
+  box-shadow: none;
+}
+
+.bo-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+/* ---------- Flags ---------- */
+.bo-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.bo-flag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  color: var(--gold-bright);
+}
+.bo-flag.danger {
+  background: rgba(255, 59, 59, 0.12);
+  border-color: rgba(255, 59, 59, 0.4);
+  color: var(--signal-red);
+}
+
+/* ---------- Footer ---------- */
+.bo-footer {
+  margin-top: 36px;
+  border-top: 1px solid var(--obsidian-edge);
+  padding-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #6b6555;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+}
