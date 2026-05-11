@@ -2,64 +2,44 @@
 
 ## Original problem statement
 BiOracle (brahmanbob/BiOracle) — sovereign biological-triage app for Samsung S21.
-Headline features (full roadmap):
-1. **Vascular Asymmetry (Internal Bleeding)** — Replace slider with rear-cam + flash PPG. Light-absorption variance → asymmetry score → `emergencyTriage` in `SovereignLogic.ts`.
-2. **Clinical Leverage (PDF Report)** — Gold-on-Obsidian one-page PDF with QR linking to raw sensor ledger; auto-generated on Critical signals.
-3. **EMF Stealth Sensor** — Wire magnetometer; show "Synthetic Interference" warning on Health Battery.
-4. **UI Polish** — Gold-Glow Battery pulse frequency matches PPG-detected heart rate.
 
-## Crack roadmap (user-authored phasing)
-- **Crack #1 — Shell (THIS PASS, DONE 2026-05-11)**: SovereignLogic + Obsidian/Gold Health Battery + Triage Dashboard + app.json with expo deps + backend ledger foundation.
-- **Crack #2 — Sensor wiring**: PPG (expo-camera + flash), stomach mic (expo-av), magnetometer (expo-sensors).
-- **Crack #3 — Clinical Leverage PDF**: Gold-on-Obsidian jsPDF report + QR code → `/api/ledger/{id}`.
+## Crack roadmap
+- **Crack #1 — Shell** ✅ (2026-05-11) — `SovereignLogic.ts`, Obsidian/Gold Health Battery, Triage Dashboard, backend ledger.
+- **Crack #2 — Sensor wiring** ✅ (2026-05-11) — Live PPG (camera+torch+canvas), live mic (AnalyserNode), live magnetometer (Generic Sensor API), Synthetic Interference badge, PPG-amplitude flicker on battery glow.
+- **Crack #3 — Clinical Leverage PDF** ⏳ Gold-on-Obsidian one-page PDF + QR → `/api/ledger/{id}`.
 
 ## Architecture
-- **Frontend**: React 19 + TypeScript (CRA + CRACO), Tailwind disabled in favour of `bioracle.css` (Obsidian/Gold theme, Cormorant Garamond + JetBrains Mono).
+- **Frontend**: React 19 + TypeScript (CRA + CRACO). Theme `bioracle.css` (Obsidian/Gold; Cormorant Garamond + JetBrains Mono).
 - **Backend**: FastAPI + Motor (MongoDB) — sovereign ledger.
-- **Mobile-native targets** declared in `app.json` for future Expo build (Camera, AV, Sensors).
+- **Native target** declared in `app.json` (Expo) — `expo-camera`, `expo-av`, `expo-sensors`; web implementation uses the equivalent W3C APIs that already ship in S21 Chrome.
 
 ## Core files
-- `frontend/src/SovereignLogic.ts` — pure functions: `fingerprintToABO`, `stomachAcousticAnalysis`, `emergencyTriage`.
-- `frontend/src/App.tsx` — root, wires Health Battery + Triage Dashboard.
-- `frontend/src/components/HealthBattery.tsx` — SVG obsidian-shell + gold-fill + heart-rate-locked pulse ring (60000/bpm ms).
-- `frontend/src/components/TriageDashboard.tsx` — 4 signal cards (Lectin / Vascular / EMF / Acoustic).
-- `frontend/src/components/SignalCard.tsx` — reusable card with severity bar.
-- `frontend/src/styles/bioracle.css` — full Obsidian/Gold theme + heartbeat keyframes.
-- `frontend/app.json` — Expo manifest declaring `expo-camera`, `expo-av`, `expo-sensors` for Crack #2.
-- `backend/server.py` — `POST /api/triage/scan`, `GET /api/ledger/{id}`, `GET /api/triage/scan`.
+- `frontend/src/SovereignLogic.ts` — `fingerprintToABO`, `stomachAcousticAnalysis`, `emergencyTriage`.
+- `frontend/src/hardware/usePPGScanner.ts` — `getUserMedia` env-cam + `applyConstraints({advanced:[{torch:true}]})` + canvas red-channel sampling → HR (peak detection) + HRV (SDNN) + amplitude → asymmetry score (HRV+lowSNR fusion).
+- `frontend/src/hardware/useStomachMic.ts` — `AudioContext` + `AnalyserNode` → time-domain feeds `stomachAcousticAnalysis`, frequency-domain computes sub-50Hz energy ratio + `lectinSignature`.
+- `frontend/src/hardware/useMagnetometer.ts` — `new Magnetometer({frequency:10})` → µT magnitude, baseline (median), spike count, syntheticInterference when µT > 65.
+- `frontend/src/components/HealthBattery.tsx` — SVG vessel; pulse duration = `60000/heartRate`; drop-shadow blur modulated by live PPG amplitude (real-time flicker); **SYNTHETIC INTERFERENCE** badge top-right when mag > 65 µT.
+- `frontend/src/components/TriageDashboard.tsx` — 4 sensor cards with start/stop buttons, sparkline for PPG live signal, live readouts.
+- `frontend/src/App.tsx` — composes all hooks, exposes Run Full Scan / Stop All / Commit to Ledger.
+- `frontend/app.json` — Expo manifest with permissions (CAMERA, FLASHLIGHT, RECORD_AUDIO, MAGNETOMETER).
+- `backend/server.py` — `/api/triage/scan` (POST + GET list), `/api/ledger/{id}` (GET, 404 if missing). Now accepts arbitrary `raw` object for sensor traces.
 
-## API surface
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET    | `/api/` | Service handshake |
-| POST   | `/api/triage/scan` | Persist sensor data + verdict; returns `{id, ledger_url, critical, level}` |
-| GET    | `/api/triage/scan` | List recent scans |
-| GET    | `/api/ledger/{scan_id}` | Public ledger (QR target on the medic-handoff PDF) |
+## Sensor → SovereignLogic mapping
+| Input         | Source                                     | Triage threshold              |
+|---------------|--------------------------------------------|-------------------------------|
+| `lectin`      | `useStomachMic.lectinSignature` (sub-50Hz × events) | ≥ 0.75 → CRITICAL    |
+| `vascularAsymmetry` | `usePPGScanner.asymmetry` = 0.6·HRV_norm + 0.4·lowSNR | ≥ 0.70 → CRITICAL |
+| `emf`         | `useMagnetometer.emfIndex` = (µT-30)/120   | µT > 65 → synthetic-interference flag |
+| `heartRate`   | `usePPGScanner.heartRate`                  | drives battery pulse + U-shaped HR risk |
 
-## Triage logic (SovereignLogic.emergencyTriage)
-- `lectin ≥ 0.75` → Critical (lectin-spike)
-- `vascular ≥ 0.70` → Critical (internal-bleeding-suspect)
-- `emf ≥ 0.65` → flag `synthetic-interference`
-- Both critical signals + high EMF → **sovereign-override** (medic-handoff warranted)
-- Acoustic state `lectin-irritation` amplifies lectin by +0.15
-- AB blood group amplifies lectin by +0.08
+## Verified (2026-05-11)
+- Sliders → SOVEREIGN OVERRIDE escalation
+- Mock scan → battery pulse retunes to HR
+- Backend round-trip with enriched raw payload (PPG/mag/mic)
+- Magnetometer graceful fallback when API unavailable
 
-## What's implemented (Crack #1)
-- [x] `SovereignLogic.ts` with fingerprint→ABO, stomach acoustic, emergency triage
-- [x] Obsidian & Gold Health Battery (SVG, heart-rate-locked pulse, severity colouring)
-- [x] Digital Triage Dashboard (4 signal cards, sliders as Crack #2 placeholders)
-- [x] Backend ledger (POST scan / GET ledger / 404 on missing)
-- [x] Mock scan ramps HR + scanIntensity so pulse-frequency-lock is visibly demonstrated
-- [x] `app.json` declaring expo-camera / expo-av / expo-sensors permissions for future native build
-- [x] Backend ↔ frontend integration smoke-tested (ledger id surfaced in UI)
-
-## Next Action Items (Crack #2)
-- Wire `expo-camera` (or Web `getUserMedia` + ImageCapture torch) for PPG scan → derive HR + vascular asymmetry
-- Wire `expo-av` (or `MediaRecorder`) for stomach acoustic
-- Wire `expo-sensors` Magnetometer (or `Magnetometer` Web API) for EMF
-- Replace vascular slider with `PPGScanner` component pushing into `setVascular`
-
-## Backlog (Crack #3)
-- `jspdf` + `qrcode` Gold-on-Obsidian one-page report
-- Auto-trigger PDF on any `critical` verdict
-- QR encodes absolute `/api/ledger/{id}` URL
+## Next (Crack #3)
+- `yarn add jspdf qrcode`
+- `lib/pdfReport.ts` — Gold-on-Obsidian one-page jsPDF renderer
+- Auto-show "Print PDF for Medic" button on any `verdict.critical === true`
+- QR encodes `${REACT_APP_BACKEND_URL}/api/ledger/${id}`
