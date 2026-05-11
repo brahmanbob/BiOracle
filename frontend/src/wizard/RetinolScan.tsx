@@ -1,14 +1,15 @@
 import React, { useRef, useState } from "react";
 import { useFrontCamera } from "@/hardware/useFrontCamera";
-import { analyseSclera, type ScleraReading } from "@/lib/imageAnalysis";
+import { analyseSclera, type ScleraReading, type ScanLighting } from "@/lib/imageAnalysis";
 
 interface Props {
   onComplete: (reading: ScleraReading) => void;
   onSkip: () => void;
   accent: string;
+  lighting?: ScanLighting;
 }
 
-const RetinolScan: React.FC<Props> = ({ onComplete, onSkip, accent }) => {
+const RetinolScan: React.FC<Props> = ({ onComplete, onSkip, accent, lighting = "indoor" }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cam = useFrontCamera(videoRef);
   const [reading, setReading] = useState<ScleraReading | null>(null);
@@ -18,7 +19,7 @@ const RetinolScan: React.FC<Props> = ({ onComplete, onSkip, accent }) => {
     setBusy(true);
     const img = cam.capture();
     if (img) {
-      const r = analyseSclera(img);
+      const r = analyseSclera(img, lighting);
       setReading(r);
     }
     setBusy(false);

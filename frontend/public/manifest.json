@@ -1,13 +1,19 @@
 {
   "name": "BiOracle — Sovereign Triage",
   "short_name": "BiOracle",
+  "id": "bioracle.sovereign",
   "description": "Sovereign biological triage. PPG · APG · Stomach Acoustic · EMF Stealth · Gold-on-Obsidian Medic Ledger.",
   "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0a0a0d",
   "theme_color": "#0a0a0d",
-  "categories": ["health", "medical", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": ["health", "medical", "utilities", "lifestyle"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -26,6 +32,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Morning Calibration",
+      "short_name": "Morning",
+      "description": "Start the Medical ritual with sunlight-aware sensitivity.",
+      "url": "/?scene=medical&morning=1",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Emergency PPG",
+      "short_name": "Emergency",
+      "description": "Open the bleed-triage PPG scan.",
+      "url": "/?scene=emergency",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Stealth Watch",
+      "short_name": "Stealth",
+      "description": "Contextual EMF + Intent watch.",
+      "url": "/?scene=stealth",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "permissions": [

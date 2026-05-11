@@ -791,3 +791,581 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   .bo-step-title { font-size: 24px; }
   .bo-bento { grid-template-columns: 1fr 1fr; }
 }
+
+/* ================================================================
+   V14 — Profile themes + Cruise + Beauty + Universal Stealth
+   ================================================================ */
+
+/* Profile chips */
+.bo-profile-switcher {
+  display: flex; gap: 6px; margin-top: 10px;
+}
+.bo-profile-switcher .chip {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--gold-mid) 30%, transparent);
+  background: rgba(10,10,14,0.55);
+  color: #8a8475;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.25s ease;
+}
+.bo-profile-switcher .chip:hover { color: var(--gold-bright); }
+.bo-profile-switcher .chip.on {
+  color: var(--obsidian-0);
+  font-weight: 800;
+  border-color: transparent;
+}
+.bo-profile-switcher .chip.chip-sovereign.on {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
+  box-shadow: 0 0 18px var(--gold-glow);
+}
+.bo-profile-switcher .chip.chip-cruise.on {
+  background: linear-gradient(180deg, #c0ff00, #6dba00);
+  box-shadow: 0 0 18px rgba(192,255,0,0.6);
+  color: #050507;
+}
+.bo-profile-switcher .chip.chip-beauty.on {
+  background: linear-gradient(180deg, #ffd1de, #c97a90);
+  box-shadow: 0 0 18px rgba(255,182,193,0.55);
+  color: #2a0e15;
+}
+
+/* ---------- Cruise · Carbon Fiber / Neon Volt ---------- */
+.bo-app[data-profile="cruise"] {
+  --gold-bright: #c0ff00;
+  --gold-mid: #9adb00;
+  --gold-deep: #5d8a00;
+  --gold-glow: rgba(192,255,0,0.55);
+}
+.bo-app[data-profile="cruise"] body,
+.bo-app[data-profile="cruise"] .bo-dash {
+  /* re-paint backgrounds */
+}
+.bo-app[data-profile="cruise"] {
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.014) 0, rgba(255,255,255,0.014) 2px, transparent 2px, transparent 4px),
+    repeating-linear-gradient(-45deg, rgba(192,255,0,0.025) 0, rgba(192,255,0,0.025) 2px, transparent 2px, transparent 4px),
+    radial-gradient(ellipse at 50% 0%, #0d1408 0%, #050805 70%);
+  min-height: 100vh;
+}
+.bo-app[data-profile="cruise"] .bo-dash-header h1 {
+  background: linear-gradient(180deg, #d9ff66 0%, #6dba00 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 28px;
+}
+.bo-app[data-profile="cruise"] .bo-card,
+.bo-app[data-profile="cruise"] .bo-scene-card,
+.bo-app[data-profile="cruise"] .bo-step,
+.bo-app[data-profile="cruise"] .bo-banter,
+.bo-app[data-profile="cruise"] .bo-verdict {
+  background: linear-gradient(160deg, rgba(20,28,12,0.7), rgba(5,8,5,0.92));
+  border-color: rgba(192,255,0,0.22);
+  box-shadow: inset 1px 1px 1.5px rgba(192,255,0,0.06), inset -2px -2px 5px rgba(0,0,0,0.85), 0 10px 22px rgba(0,0,0,0.55);
+}
+.bo-app[data-profile="cruise"] .bo-glass-btn.primary {
+  background: linear-gradient(180deg, #c0ff00, #6dba00);
+  color: #050507;
+  border-color: #c0ff00;
+}
+.bo-app[data-profile="cruise"] .bo-blood-stats > div b { color: #d9ff66; }
+.bo-app[data-profile="cruise"] .bo-step-progress > span { background: linear-gradient(90deg, #6dba00, #c0ff00); }
+
+/* ---------- Beauty · Liquid Pearl / Iridescent Rose ---------- */
+.bo-app[data-profile="beauty"] {
+  --gold-bright: #ffd1de;
+  --gold-mid: #ff9bb3;
+  --gold-deep: #b56079;
+  --gold-glow: rgba(255,182,193,0.55);
+}
+.bo-app[data-profile="beauty"] {
+  background:
+    radial-gradient(ellipse at 30% 10%, rgba(255,209,222,0.18) 0%, transparent 40%),
+    radial-gradient(ellipse at 70% 25%, rgba(196,178,255,0.14) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 0%, #1c1418 0%, #0a0608 70%);
+  min-height: 100vh;
+}
+.bo-app[data-profile="beauty"] .bo-dash-header h1 {
+  background: linear-gradient(110deg, #ffe4ed 0%, #ff9bb3 40%, #c4b2ff 70%, #ffe4ed 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: pearl-shimmer 8s linear infinite;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 40px;
+  letter-spacing: 0.02em;
+}
+@keyframes pearl-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.bo-app[data-profile="beauty"] .bo-card,
+.bo-app[data-profile="beauty"] .bo-scene-card,
+.bo-app[data-profile="beauty"] .bo-step,
+.bo-app[data-profile="beauty"] .bo-banter,
+.bo-app[data-profile="beauty"] .bo-verdict {
+  background:
+    linear-gradient(160deg, rgba(255,209,222,0.07), rgba(20,12,16,0.85));
+  border-color: rgba(255,155,179,0.3);
+  box-shadow: inset 1px 1px 1.5px rgba(255,209,222,0.1), inset -2px -2px 6px rgba(0,0,0,0.7), 0 10px 24px rgba(0,0,0,0.45);
+}
+.bo-app[data-profile="beauty"] .bo-glass-btn.primary {
+  background: linear-gradient(180deg, #ffd1de, #c97a90);
+  color: #2a0e15;
+  border-color: #ffd1de;
+}
+.bo-app[data-profile="beauty"] .bo-blood-stats > div b { color: #ffd1de; }
+.bo-app[data-profile="beauty"] .bo-step-title { color: #ffd1de; }
+
+/* ---------- Cruise scene card · Anabolic result ---------- */
+.bo-mode-switch {
+  display: flex; gap: 6px; padding: 4px;
+  background: rgba(0,0,0,0.5); border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.bo-mode-switch button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #8a8475;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  padding: 9px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.bo-mode-switch button.on {
+  background: linear-gradient(180deg, var(--accent), #6dba00);
+  color: #050507;
+  font-weight: 800;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.bo-anabolic {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, transparent), rgba(0,0,0,0.6));
+}
+.bo-anabolic .ribbon {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.bo-anabolic .bigbar {
+  position: relative;
+  height: 26px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 999px;
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.bo-anabolic .bigbar .fill {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--accent), #d9ff66);
+  transition: width 0.6s ease;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.bo-anabolic .bigbar .pct {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: #fff;
+  mix-blend-mode: difference;
+}
+.bo-anabolic .directive {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #d9ff66;
+  margin: 6px 0 8px;
+}
+.bo-anabolic .meta {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #8a8475;
+  text-transform: uppercase;
+}
+.bo-anabolic .meta b { color: var(--accent); }
+.bo-anabolic.status-open { box-shadow: 0 0 22px rgba(192,255,0,0.35); }
+.bo-anabolic.status-warming .directive { color: #f5d23a; }
+.bo-anabolic.status-depleted { border-color: rgba(255,59,59,0.5); }
+.bo-anabolic.status-depleted .directive { color: var(--signal-red); }
+.bo-anabolic.status-depleted .bigbar .fill { background: linear-gradient(90deg, var(--signal-red), #ff8a72); }
+
+/* ---------- Beauty scene · Glow result ---------- */
+.bo-torch-pill {
+  position: absolute; top: 8px; left: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255,209,222,0.18);
+  border: 1px solid rgba(255,209,222,0.55);
+  color: #ffd1de;
+  text-transform: uppercase;
+}
+.bo-glow {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(255,209,222,0.22), transparent 60%),
+    linear-gradient(160deg, rgba(255,209,222,0.08), rgba(15,8,12,0.85));
+  border: 1px solid rgba(255,209,222,0.3);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.bo-glow .dial {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle, rgba(255,209,222,0.32) 0%, rgba(15,8,12,0.85) 70%);
+  border: 1px solid rgba(255,209,222,0.45);
+  box-shadow: inset 0 0 24px rgba(255,209,222,0.18);
+}
+.bo-glow .dial .num {
+  font-family: var(--font-serif);
+  font-size: 56px;
+  background: linear-gradient(110deg, #ffe4ed 0%, #ff9bb3 50%, #c4b2ff 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: pearl-shimmer 6s linear infinite;
+}
+.bo-glow .dial .lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: #ffd1de;
+  text-transform: uppercase;
+  margin-top: -4px;
+}
+.bo-glow .dial .tier {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: #ffd1de;
+  margin-top: 8px;
+}
+.bo-glow .rows {
+  display: flex; flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #c2bca4;
+}
+.bo-glow .rows .row {
+  display: flex; justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(255,209,222,0.18);
+}
+.bo-glow .rows .row b { color: #ffd1de; }
+.bo-glow .rationale {
+  grid-column: 1 / -1;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: #ffe4ed;
+  margin: 4px 0 0;
+}
+.bo-glow.tier-radiant .dial { box-shadow: inset 0 0 36px rgba(255,209,222,0.4), 0 0 24px rgba(255,209,222,0.3); }
+.bo-glow.tier-depleted .dial .num { background: linear-gradient(110deg, #f0c0c0 0%, #b56079 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+@media (max-width: 540px) {
+  .bo-glow { grid-template-columns: 1fr; }
+}
+
+/* ---------- Universal Stealth banner ---------- */
+.bo-universal-stealth {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: linear-gradient(90deg, rgba(255,59,59,0.18), rgba(255,59,59,0.32), rgba(255,59,59,0.18));
+  border-bottom: 1px solid rgba(255,59,59,0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--signal-red);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  animation: stealth-banner-pulse 1.5s infinite;
+}
+.bo-universal-stealth .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--signal-red);
+  box-shadow: 0 0 10px var(--signal-red);
+}
+@keyframes stealth-banner-pulse {
+  0%,100% { background: linear-gradient(90deg, rgba(255,59,59,0.18), rgba(255,59,59,0.32), rgba(255,59,59,0.18)); }
+  50% { background: linear-gradient(90deg, rgba(255,59,59,0.28), rgba(255,59,59,0.48), rgba(255,59,59,0.28)); }
+}
+
+/* Bento extra tile shape support */
+.bo-tile.tile-cruise { animation: tile-neon-volt 2.6s infinite; }
+@keyframes tile-neon-volt {
+  0%,100% { box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -2px -2px 5px var(--neu-dark), 0 14px 28px rgba(0,0,0,0.55), 0 0 0 rgba(192,255,0,0); }
+  50%     { box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -2px -2px 5px var(--neu-dark), 0 14px 28px rgba(0,0,0,0.55), 0 0 22px rgba(192,255,0,0.45); }
+}
+.bo-tile.tile-beauty { animation: tile-pearl-shimmer 3s infinite; }
+@keyframes tile-pearl-shimmer {
+  0%,100% { box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -2px -2px 5px var(--neu-dark), 0 14px 28px rgba(0,0,0,0.55), 0 0 0 rgba(255,155,179,0); }
+  50%     { box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -2px -2px 5px var(--neu-dark), 0 14px 28px rgba(0,0,0,0.55), 0 0 24px rgba(255,155,179,0.45); }
+}
+
+/* ================================================================
+   Trinity Finalization — Morning Mode + Bridge status panel
+   ================================================================ */
+
+.bo-morning-bar {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(255,217,102,0.05), rgba(0,0,0,0.6));
+  border: 1px solid rgba(212,175,55,0.25);
+}
+.bo-morning-bar .hint {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: #8a8475;
+  text-transform: uppercase;
+}
+.bo-toggle {
+  display: inline-flex; align-items: center; gap: 12px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold-bright);
+  text-transform: uppercase;
+}
+.bo-toggle input { display: none; }
+.bo-toggle .track {
+  width: 44px; height: 22px; border-radius: 999px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(212,175,55,0.45);
+  position: relative;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+.bo-toggle .thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
+  box-shadow: 0 0 10px var(--gold-glow);
+  transition: all 0.25s cubic-bezier(.4,.7,.3,1.2);
+}
+.bo-toggle input:checked + .track {
+  background: linear-gradient(90deg, rgba(255,217,102,0.25), rgba(245,166,35,0.4));
+  border-color: var(--gold-bright);
+}
+.bo-toggle input:checked + .track .thumb {
+  left: 24px;
+  background: linear-gradient(180deg, #ffe082, #f5a623);
+}
+
+/* Bridge status panel inside Stealth scene */
+.bo-bridge-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.bo-bridge-status .row {
+  display: flex; justify-content: space-between;
+  color: #8a8475;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bo-bridge-status .row b {
+  color: var(--gold-bright);
+}
+.bo-bridge-status .row b.on {
+  color: var(--signal-red);
+  animation: stealth-alert-flash 1.1s infinite;
+}
+
+.bo-stealth-alert .bridge-actions {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #ffd1ce;
+  display: flex; flex-direction: column;
+  gap: 3px;
+  letter-spacing: 0.12em;
+}
+.bo-stealth-alert .bridge-actions li.prompt {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(255,59,59,0.18);
+  border: 1px dashed rgba(255,59,59,0.6);
+  border-radius: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* ================================================================
+   Auto-Stealth — Ghost Silver ripple + Auto alert card
+   ================================================================ */
+
+.bo-ghost-ripple {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  overflow: hidden;
+}
+.bo-ghost-ripple .r {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(214, 216, 224, 0.55);
+  border-radius: 14px;
+  opacity: 0;
+  animation: ghost-ripple 4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+  box-shadow: inset 0 0 38px rgba(214, 216, 224, 0.18), 0 0 38px rgba(214, 216, 224, 0.16);
+}
+.bo-ghost-ripple .r.r2 { animation-delay: 1s; }
+.bo-ghost-ripple .r.r3 { animation-delay: 2s; }
+.bo-ghost-ripple .r.r4 { animation-delay: 3s; }
+
+@keyframes ghost-ripple {
+  0%   { transform: scale(1.02); opacity: 0; border-color: rgba(214,216,224,0.0); }
+  10%  { opacity: 0.55; border-color: rgba(214,216,224,0.7); }
+  100% { transform: scale(0.86); opacity: 0; border-color: rgba(214,216,224,0); }
+}
+
+/* corner glow strips so the ripple reads as edge-protection rather than a box */
+.bo-ghost-ripple::before,
+.bo-ghost-ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(214,216,224,0.18), transparent 18%, transparent 82%, rgba(214,216,224,0.18)),
+    linear-gradient(90deg,  rgba(214,216,224,0.12), transparent 14%, transparent 86%, rgba(214,216,224,0.12));
+  animation: ghost-edge 3.2s ease-in-out infinite;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+.bo-ghost-ripple::after { animation-delay: 1.6s; }
+@keyframes ghost-edge {
+  0%,100% { opacity: 0.35; }
+  50%     { opacity: 0.85; }
+}
+
+.bo-ghost-ripple .ghost-pill {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 26, 0.65);
+  border: 1px solid rgba(214, 216, 224, 0.55);
+  color: #d6d8e0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 0 22px rgba(214,216,224,0.28);
+  pointer-events: auto;
+}
+.bo-ghost-ripple .ghost-pill .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #d6d8e0;
+  box-shadow: 0 0 12px #d6d8e0;
+  animation: ghost-dot 1.4s ease-in-out infinite;
+}
+@keyframes ghost-dot {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50%     { opacity: 1;   transform: scale(1.2); }
+}
+
+/* Auto alert card inside Stealth scene */
+.bo-auto-alert {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(214, 216, 224, 0.55);
+  background: linear-gradient(160deg, rgba(214,216,224,0.10), rgba(15,15,22,0.85));
+  box-shadow: 0 0 22px rgba(214,216,224,0.18);
+}
+.bo-auto-alert .title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: #d6d8e0;
+  text-transform: uppercase;
+}
+.bo-auto-alert p {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: #ece5cf;
+  margin: 8px 0;
+}
+.bo-auto-alert .bridge-actions {
+  list-style: none;
+  padding: 0; margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #c2bca4;
+  display: flex; flex-direction: column;
+  gap: 3px;
+  letter-spacing: 0.14em;
+}
+.bo-auto-alert .bridge-actions li.prompt {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(214,216,224,0.10);
+  border: 1px dashed rgba(214,216,224,0.55);
+  border-radius: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #d6d8e0;
+}
+
+/* Subtle whole-app aesthetic when auto-stealth is on */
+.bo-app.auto-stealth-active .bo-card,
+.bo-app.auto-stealth-active .bo-scene-card,
+.bo-app.auto-stealth-active .bo-step,
+.bo-app.auto-stealth-active .bo-banter,
+.bo-app.auto-stealth-active .bo-tile {
+  border-color: rgba(214, 216, 224, 0.35);
+}

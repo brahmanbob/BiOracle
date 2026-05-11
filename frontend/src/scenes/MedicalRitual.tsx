@@ -14,6 +14,7 @@ interface Props {
   syntheticInterference: boolean;
   haptic?: () => void;
   pdfPrint?: (payload: any) => Promise<void> | void;
+  profile?: "sovereign" | "cruise" | "beauty";
 }
 
 type Step = "retinol" | "tongue" | "blood" | "banter";
@@ -23,12 +24,17 @@ interface BloodPayload {
   vascularAge: number; agingIndex: number;
 }
 
-const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfMicrotesla, syntheticInterference, haptic, pdfPrint }) => {
+const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfMicrotesla, syntheticInterference, haptic, pdfPrint, profile }) => {
   const [step, setStep] = useState<Step>("retinol");
   const [sclera, setSclera] = useState<ScleraReading | null>(null);
   const [tongue, setTongue] = useState<TongueReading | null>(null);
   const [blood, setBlood] = useState<BloodPayload | undefined>(undefined);
+  const [morning, setMorning] = useState<boolean>(() => {
+    // honor ?morning=1 URL shortcut from the PWA manifest shortcut
+    try { return new URLSearchParams(window.location.search).get("morning") === "1"; } catch { return false; }
+  });
 
+  const lighting = morning ? "morning" : "indoor";
   const steps: Step[] = ["retinol", "tongue", "blood", "banter"];
 
   return (
@@ -43,10 +49,29 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
         </div>
       </header>
 
+      <div className="bo-morning-bar" data-testid="morning-bar">
+        <label className="bo-toggle">
+          <input
+            type="checkbox"
+            checked={morning}
+            onChange={(e) => setMorning(e.target.checked)}
+            data-testid="toggle-morning"
+          />
+          <span className="track"><span className="thumb" /></span>
+          <span className="label">{morning ? "☀ Morning Calibration ON" : "⌂ Indoor Lighting"}</span>
+        </label>
+        <span className="hint">
+          {morning
+            ? "Sensitivity adjusted for indirect sunlight: higher lum floor, softer jaundice / heat thresholds."
+            : "Default indoor profile — switch on for AM scans by a window."}
+        </span>
+      </div>
+
       <div className="bo-imm-body">
         {step === "retinol" && (
           <RetinolScan
             accent={accent}
+            lighting={lighting}
             onComplete={(r) => { setSclera(r); setStep("tongue"); }}
             onSkip={() => setStep("tongue")}
           />
@@ -54,6 +79,7 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
         {step === "tongue" && (
           <TongueScan
             accent={accent}
+            lighting={lighting}
             onComplete={(r) => { setTongue(r); setStep("blood"); }}
             onSkip={() => setStep("blood")}
           />
@@ -75,6 +101,7 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
             lectinSignature={lectinSignature}
             emfMicrotesla={emfMicrotesla}
             syntheticInterference={syntheticInterference}
+            profile={profile}
             onPdf={pdfPrint ? async (remedy: RemedyCard) => {
               await pdfPrint({ sclera, tongue, blood, remedy });
             } : undefined}

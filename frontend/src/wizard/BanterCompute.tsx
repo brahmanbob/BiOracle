@@ -15,6 +15,7 @@ interface Props {
   onPdf?: (remedy: RemedyCard) => Promise<void> | void;
   onClose: () => void;
   accent: string;
+  profile?: "sovereign" | "cruise" | "beauty";
 }
 
 const DEFAULT_BLOOD = fingerprintToABO({
@@ -22,7 +23,7 @@ const DEFAULT_BLOOD = fingerprintToABO({
 });
 
 const BanterCompute: React.FC<Props> = ({
-  sclera, tongue, bloodPayload, lectinSignature, emfMicrotesla, syntheticInterference, onPdf, onClose, accent,
+  sclera, tongue, bloodPayload, lectinSignature, emfMicrotesla, syntheticInterference, onPdf, onClose, accent, profile,
 }) => {
   const [banterText, setBanterText] = useState("");
   const [history, setHistory] = useState<Array<{ role: "user" | "oracle"; text: string }>>([
@@ -48,6 +49,7 @@ const BanterCompute: React.FC<Props> = ({
       vascularAsymmetry: bloodPayload?.asymmetry ?? 0,
       lectinSignature,
       syntheticInterference,
+      profile,
     };
     const r = generateRemedy(scans, banterText);
     setRemedy(r);

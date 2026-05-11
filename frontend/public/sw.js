@@ -22,6 +22,19 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+// Auto-Stealth periodic-sync hint — only fires if browser grants the permission
+// (rare; opt-in via Site Settings). Posts a wake message to all open clients so
+// the in-page useAutoStealth tick stays alive even between visibility flips.
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag === "bo.autostealth") {
+    event.waitUntil(
+      self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
+        clients.forEach((c) => c.postMessage({ type: "bo.autostealth.tick" }));
+      })
+    );
+  }
+});
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   const url = new URL(req.url);

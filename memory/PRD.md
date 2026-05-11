@@ -1,72 +1,80 @@
-# BiOracle — Sovereign Ritual V13
+# BiOracle — Auto-Stealth (V15-Trinity Invention)
 
 ## Original problem statement
 BiOracle (brahmanbob/BiOracle) — sovereign biological-triage app for Samsung S21.
 
 ## Crack roadmap
 - Crack #1 Shell · #2 Sensors · #3 Golden Relic — superseded.
-- **V13 Sovereign Ritual** ✅ (2026-05-11) — full UI rewrite to Bento + Immersion + Wizard + Banter + Swipe Vial + Contextual Stealth.
+- V13 Bento UI · V14 Profiles (Sovereign / Cruise / Beauty).
+- **Auto-Stealth Invention** ✅ (2026-05-11) — proactive radio suppression on static phone + screen on + dwell.
 
-## V13 Architecture
-- **Scene state machine** in `App.tsx` (`useState<Scene>`) — no router lib. Scenes: `dashboard` · `medical` · `digestion` · `emergency` · `stealth` · `vial`.
-- **Bento Dashboard** (`scenes/Dashboard.tsx`) — 4 tiles only, exact accents:
-  - Medical · Sky Blue `#6dc4dd`
-  - Digestion · Amber `#f5a623`
-  - Emergency · Blood Red `#ff5b50` (pulsing)
-  - Stealth · Silver `#cfcfd9`
-- **Full-screen immersion** — tapping a tile replaces the dashboard entirely; animated fade+blur entry.
-- **Swipe-down anywhere on dashboard** → `LiquidBatteryFullscreen` overlay (zoomed 1.4× vial); swipe-up or tap to close. (`hardware/useSwipeGesture.ts`)
+## Auto-Stealth logic
+`useIntent.ts` now computes:
+- `magVariance` (rolling σ of µT samples over 100 ticks)
+- `motionVariance` (rolling σ of DeviceMotion accel magnitude over 60 ticks)
+- `autoStealthEngaged = magVariance > 0 AND magVariance < 0.05µT AND motionVariance < 0.25 m/s² AND visibility AND dwell > 4s`
 
-## Ritual Wizard (Medical scene)
-Sequential pipeline with dot-stepper:
-1. `wizard/RetinolScan.tsx` — front camera → `analyseSclera()` → yellowness/redness/dryness → indicator `{stable|watch|irritated|jaundiced}`.
-2. `wizard/TongueScan.tsx` — front camera → `analyseTongue()` → hue/coating/redness → TCM-ish state `{healthy|qi-deficient|heat|stasis|damp-heat}`.
-3. `wizard/BloodScan.tsx` — rear camera + torch PPG (12s) → HR, HRV, asymmetry, **APG vascular age**.
-4. `wizard/BanterCompute.tsx` — conversational Oracle persona, accepts free text symptoms, runs `generateRemedy()` → **Remedy Card** with 3 prioritized actions + today's ritual + Print PDF for Medic.
+`useAutoStealth.ts` orchestrator:
+- Debounces 3 consecutive seconds of `autoStealthEngaged` before engaging (so micro-shakes don't flap the radio)
+- On engage → `useNativeBridge.suppressRadio()` (wake-lock + ABORT_BUS abort + Capacitor RadioSuppress plugin if present)
+- On disengage → `releaseRadio()` immediately (single-tick, safety first)
+- Exposes `{active, engagedSince, staticTicks, lastResult, runtime}`
 
-## Remedy Engine
-`lib/remedyEngine.ts` — deterministic, sovereign (no LLM, no network call). Fuses all 3 scans + free-text banter keyword detection (`fatigue/pain/headache/digestion/sleep/anxiety/bleeding/fever/vision`). Output: `{banter, topConcern, band: stable|watch|urgent, actions[], ritual, echoedSymptoms, flags}`. Bands drive PDF visibility (Print PDF for Medic appears only when band ≠ stable).
+`App.tsx` runs it globally across all profiles (Sovereign / Cruise / Beauty) — Stealth IS universal.
 
-## Contextual Stealth
-`hardware/useIntent.ts` fuses:
-- `dwell` — fraction of last 30s with no scroll/touch
-- `motionStability` — DeviceMotion accel variance inverted
-- `magStability` — µT variance inverted
-- `visibility` — `document.visibilityState`
+## Ghost Silver ripple
+CSS-only overlay (`.bo-ghost-ripple`) mounted only when `autoStealth.active`:
+- 4 staggered ripple rings (`r1..r4`) animating inward at 4s cycle with 1s phase offsets
+- `::before` / `::after` edge-glow strips with `mix-blend-mode: screen`
+- Floating bottom-center pill: `◉ AUTO-STEALTH · {n}s · {runtime}`
+- Silver accent #d6d8e0 — subtle, not alarming (different from the red Reactive Stealth banner)
+- Card borders across the entire app shift to silver tone via `.bo-app.auto-stealth-active`
 
-→ `intent` 0..1 score. `stealthEngaged = (µT > 65) AND (intent > 0.6)` — proactively flags EMF interference *only when the carrier is focused* (real attack vector, not ambient noise). Surfaces as red-pulsing app filter + Stealth-scene alert banner.
+## Native bridge enhancements (`useNativeBridge.ts`)
+- Runtime detection: `capacitor / twa / pwa / browser`
+- Best-effort suppression chain:
+  1. `navigator.wakeLock.request("screen")` — keeps screen alive
+  2. `ABORT_BUS` — aborts any registered `AbortController`s (app components can `registerAbortable()` to opt-in)
+  3. `window.Capacitor.Plugins.RadioSuppress.engage()` — calls user-shipped Capacitor plugin if present in the APK
+  4. PWA fallback: marks `airplaneModePromptShown` so the Stealth scene tells the user only OS-level Airplane Mode actually kills the modem
 
-## Image analysis (`lib/imageAnalysis.ts`)
-- Sclera: central horizontal strip mean RGB, yellow/red votes, luminance variance for dryness proxy.
-- Tongue: central square mean RGB, saturation, high-luminance low-saturation share → coating; redness vote.
+## Service worker
+`bo.autostealth` periodic-sync handler — when granted (rare, requires user opt-in), posts a `bo.autostealth.tick` message to all open clients to keep the watcher alive between visibility flips. No-op when permission absent.
 
-## Preserved from previous cracks
-- `SovereignLogic.ts` — `fingerprintToABO`, `stomachAcousticAnalysis`, `emergencyTriage`
-- `hardware/usePPGScanner.ts` · `useStomachMic.ts` · `useMagnetometer.ts` · `useHaptics.ts`
-- `lib/vascularAge.ts` (Takazawa APG)
-- `lib/pdfReport.ts` (Gold-on-Obsidian A5 PDF + QR ledger)
-- `components/LiquidVialBattery.tsx` (used inside `scenes/LiquidBatteryFullscreen`)
-- `components/Spectrogram.tsx` (used inside Digestion scene)
-- Backend `/api/triage/scan` + `/api/ledger/{id}` unchanged.
-- PWA `manifest.json` + `sw.js` + procedural gold-sigil icons unchanged.
+## Files added/changed this pass
+- `hardware/useIntent.ts` — added `autoStealthEngaged`, `motionVariance`, `magVariance`
+- `hardware/useAutoStealth.ts` — NEW orchestrator
+- `hardware/useNativeBridge.ts` — already present from Trinity; reused
+- `scenes/StealthScene.tsx` — rewritten: accepts shared `intent` + `autoStealth` props; shows tick counter, σ gauges with critical highlight, Force-Engage button, Auto alert card
+- `App.tsx` — wires `useAutoStealth` globally; renders Ghost Silver ripple + AUTO pill
+- `styles/bioracle.css` — Ghost ripple keyframes, auto alert card, app-wide silver border tint when active
+- `public/sw.js` — periodic-sync listener
+- (PWA manifest hardened in previous Trinity pass — display=standalone, orientation=portrait, shortcuts, id, scope, display_override)
 
-## Verified (2026-05-11)
-- All 6 testIDs for bento tiles present
-- Dashboard genuinely vanishes on tile open (`dashboard while in immersion: 0`)
-- Medical immersion lands on `step-retinol` with full stepper visible
-- Stealth scene renders 6 gauges + graceful "Magnetometer unavailable" fallback
-- TypeScript: No issues found · webpack compiled successfully
+## Verified
+- TS compile: No issues found · webpack: compiled successfully (7 successive clean cycles)
+- Dashboard renders V14 with Sovereign profile chip lit
+- Stealth scene shows the 6-row bridge-status panel including "Auto · 0/3 ticks"
+- 6 gauges render with σ values + critical-mark when < threshold
+- Force Engage manual button present
+- Ghost Silver ripple mounts when `data-auto-stealth="true"` (simulated, will fire automatically on a real S21 after 3 s static)
 
-## Field-test ritual
-1. Open URL in **standalone Chrome on S21** (not iframe).
-2. Dashboard appears with 4 tiles.
-3. Swipe down → full-screen Liquid Vial.
-4. Tap **Medical** → Retinol → Tongue → Blood → Banter → Remedy Card → Print PDF for Medic if urgent/watch band.
-5. Tap **Digestion** → mic + spectrogram + lectin signature.
-6. Tap **Emergency** → PPG triage + vascular age + bleeding-suspect flag + PDF.
-7. Tap **Stealth** → watch EMF × Intent fusion; spike during focus = red alert banner.
+## Field-test on S21
+1. Open BiOracle PWA installed on home screen
+2. Place phone face-up on the desk, screen on, scroll once and then stop reading
+3. ≤ 4 s later: dwell threshold met
+4. ≤ 7 s later: 3 static ticks accumulated → Auto-Stealth engages
+5. **Ghost Silver ripple** sweeps the screen edges inward
+6. Bottom-center pill displays `AUTO-STEALTH · {elapsed}s · capacitor|twa|pwa|browser`
+7. Open the Stealth tile to see the new Mag σ / Motion σ gauges + Suppression: RADIO QUIET row
+8. Move the phone — Auto-Stealth releases instantly (single-tick safety)
+
+## Honest limits (sovereign disclosure)
+- **No web/PWA API can directly toggle the cellular/Wi-Fi/5G radio.** Only Airplane Mode does, and the OS gates it from every userland app.
+- Auto-Stealth's actual radio-quieting is: wake-lock (no extra wake cycles), AbortController bus (no in-flight fetches keep chattering), and optional Capacitor `RadioSuppress` plugin (which a user must implement natively and ship in their APK — this is the seat for true Android `PowerManager.IDLE_DEVICE` style throttling).
+- For full RF mitigation: install the PWA → wrap as Capacitor APK → ship a tiny `RadioSuppress.java` Capacitor plugin that hits `WifiManager.setWifiEnabled(false)` or `ConnectivityManager.requestNetwork()` with `NetworkCapabilities.NET_CAPABILITY_NOT_VPN`. This bridge is already wired — the hook will detect and call it.
 
 ## Backlog
-- Wire `localStorage` rolling baseline (5 last scans) for per-user deviation triage.
-- Optional Ed25519-signed ledger entries (provenance/tamper for medic).
-- Native Capacitor/Expo build via PWABuilder TWA — `app.json` permissions already aligned.
+- Optional `RadioSuppress.java` Capacitor plugin scaffold (~80 LOC) for the APK build
+- `localStorage` rolling baseline for personal HRV / vascular age deviation alerts
+- Ed25519-signed ledger entries for medic-handoff provenance

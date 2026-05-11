@@ -27,7 +27,16 @@ export interface TongueReading {
   rationale: string;
 }
 
-export function analyseSclera(img: ImageData): ScleraReading {
+export type ScanLighting = "indoor" | "morning" | "auto";
+
+export function analyseSclera(img: ImageData, lighting: ScanLighting = "indoor"): ScleraReading {
+  // Morning calibration: indirect sunlight pushes overall luminance up and
+  // skews white-balance toward blue. We raise the bright-pixel mask floor and
+  // increase the yellowness threshold so a bright wash isn't misread as jaundice.
+  const LUM_FLOOR = lighting === "morning" ? 140 : 100;
+  const YELLOW_DENOMINATOR = lighting === "morning" ? 200 : 160;
+  const REDNESS_BIAS = lighting === "morning" ? 0.85 : 1.0;
+
   // sample a central horizontal strip — sclera spans the wide axis under most poses
   const w = img.width;
   const h = img.height;
@@ -50,7 +59,7 @@ export function analyseSclera(img: ImageData): ScleraReading {
       const b = data[i + 2];
       // mask to highly-luminous pixels (sclera/skin/teeth) — drop pupils, lashes
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      if (lum < 100) continue; // skip dark pupils & lashes
+      if (lum < LUM_FLOOR) continue; // skip dark pupils & lashes (morning lifts the floor)
       rSum += r; gSum += g; bSum += b; n++;
       lumValues.push(lum);
       if (r > 180 && g > 150 && b < 130) yellowVotes++;
@@ -72,8 +81,8 @@ export function analyseSclera(img: ImageData): ScleraReading {
   const mB = bSum / n;
 
   // yellowness: how much R+G dominates over B  (jaundice / β-carotene depletion)
-  const yellowness = clamp01(((mR + mG) / 2 - mB) / 160);
-  const redness = clamp01(yellowVotes ? redVotes / (yellowVotes + redVotes + 1) : redVotes / Math.max(1, n / 80));
+  const yellowness = clamp01(((mR + mG) / 2 - mB) / YELLOW_DENOMINATOR);
+  const redness = REDNESS_BIAS * clamp01(yellowVotes ? redVotes / (yellowVotes + redVotes + 1) : redVotes / Math.max(1, n / 80));
 
   // dryness proxy: low luminance variance = matte sclera (more moist scleras refract light)
   const meanLum = lumValues.reduce((a, b) => a + b, 0) / lumValues.length;
@@ -102,7 +111,13 @@ export function analyseSclera(img: ImageData): ScleraReading {
   };
 }
 
-export function analyseTongue(img: ImageData): TongueReading {
+export function analyseTongue(img: ImageData, lighting: ScanLighting = "indoor"): TongueReading {
+  // Morning mode lifts the saturation/redness thresholds because indirect sunlight
+  // adds chroma to the tongue body that we don't want misread as "heat".
+  const COATING_GAIN = lighting === "morning" ? 1.6 : 2.0;
+  const REDNESS_GAIN = lighting === "morning" ? 1.2 : 1.5;
+  const CRIMSON_LUM = lighting === "morning" ? 195 : 180;
+
   const w = img.width;
   const h = img.height;
   const data = img.data;
@@ -149,13 +164,13 @@ export function analyseTongue(img: ImageData): TongueReading {
   const minc = Math.min(mR, mG, mB);
   const sat = maxc === 0 ? 0 : (maxc - minc) / maxc;
 
-  const coating = clamp01(whiteCoat / n * 2);
-  const redness = clamp01(totalReddish / n * 1.5);
+  const coating = clamp01(whiteCoat / n * COATING_GAIN);
+  const redness = clamp01(totalReddish / n * REDNESS_GAIN);
   const paleness = clamp01((1 - sat) * 0.7 + (mR < 150 ? 0.3 : 0));
 
   // hue classification
   let hue: TongueReading["hue"] = "pink";
-  if (mR > 180 && mG > 110 && mB < 100 && sat > 0.25) hue = "crimson";
+  if (mR > CRIMSON_LUM && mG > 110 && mB < 100 && sat > 0.25) hue = "crimson";
   else if (mB > mR - 10 && mB > 110) hue = "purple";
   else if (mR > 170 && mG > 150 && mB < 110) hue = "yellow";
   else if (sat < 0.18 && mR < 165) hue = "pale";

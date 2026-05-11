@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
 import "@/styles/bioracle.css";
-import Dashboard, { type TileKey } from "@/scenes/Dashboard";
+import Dashboard, { type TileKey, type Profile } from "@/scenes/Dashboard";
 import MedicalRitual from "@/scenes/MedicalRitual";
 import DigestionScene from "@/scenes/DigestionScene";
 import EmergencyScene from "@/scenes/EmergencyScene";
 import StealthScene from "@/scenes/StealthScene";
 import LiquidBatteryFullscreen from "@/scenes/LiquidBatteryFullscreen";
+import CruiseScene from "@/scenes/CruiseScene";
+import BeautyScene from "@/scenes/BeautyScene";
 import { useMagnetometer } from "@/hardware/useMagnetometer";
 import { useIntent } from "@/hardware/useIntent";
 import { useHaptics } from "@/hardware/useHaptics";
 import { useSwipeGesture } from "@/hardware/useSwipeGesture";
+import { useAutoStealth } from "@/hardware/useAutoStealth";
 
 type Scene = "dashboard" | TileKey | "vial";
 
@@ -18,25 +21,51 @@ const ACCENTS: Record<TileKey, string> = {
   digestion: "#f5a623",
   emergency: "#ff5b50",
   stealth:   "#cfcfd9",
+  cruise:    "#c0ff00",
+  beauty:    "#ff9bb3",
 };
+
+const PROFILE_KEY = "bo.profile.v14";
 
 function App() {
   const [scene, setScene] = useState<Scene>("dashboard");
-  const haptics = useHaptics(true);
+  const [profile, setProfileState] = useState<Profile>(() => {
+    const stored = (typeof localStorage !== "undefined" && localStorage.getItem(PROFILE_KEY)) as Profile | null;
+    return stored === "cruise" || stored === "beauty" || stored === "sovereign" ? stored : "sovereign";
+  });
 
-  // Ambient sensors (only mag is global — for contextual stealth + dashboard chip)
+  const setProfile = (p: Profile) => {
+    setProfileState(p);
+    try { localStorage.setItem(PROFILE_KEY, p); } catch {}
+    haptics.heavyClick();
+  };
+
+  const haptics = useHaptics(true);
   const mag = useMagnetometer();
   const intent = useIntent(mag.state.active ? mag.state.microtesla : null);
+  const autoStealth = useAutoStealth(intent.autoStealthEngaged);
 
-  // Auto-start magnetometer once, silently (best-effort, can fail in iframe)
+  // industrial-thump for Cruise = stacked vibration burst (harsher than soft thump)
+  const industrialThump = () => {
+    if (!haptics.supported) return;
+    navigator.vibrate([24, 12, 60]);
+  };
+
+  // auto-start magnetometer (universal stealth across profiles)
   useEffect(() => {
-    if (mag.state.available && !mag.state.active) {
-      mag.start();
-    }
+    if (mag.state.available && !mag.state.active) mag.start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mag.state.available]);
 
-  // Swipe-down anywhere on dashboard → opens fullscreen vial
+  // critical haptic when stealth engages
+  const lastStealthRef = React.useRef(false);
+  useEffect(() => {
+    if (intent.stealthEngaged && !lastStealthRef.current) {
+      haptics.criticalBuzz();
+    }
+    lastStealthRef.current = intent.stealthEngaged;
+  }, [intent.stealthEngaged, haptics]);
+
   useSwipeGesture(
     (dir) => {
       if (scene === "dashboard" && dir === "down") {
@@ -58,7 +87,6 @@ function App() {
     setScene("dashboard");
   };
 
-  // Battery-stat fed into fullscreen vial — derived from mag for now
   const dashboardChip = {
     charge: intent.stealthEngaged ? 28 : 92,
     bpm: 0,
@@ -66,10 +94,39 @@ function App() {
   };
 
   return (
-    <div className={`bo-app v13 ${intent.stealthEngaged ? "stealth-engaged-app" : ""}`} data-testid="bioracle-root">
+    <div
+      className={`bo-app v14 ${intent.stealthEngaged ? "stealth-engaged-app" : ""} ${autoStealth.active ? "auto-stealth-active" : ""}`}
+      data-profile={profile}
+      data-auto-stealth={autoStealth.active ? "true" : "false"}
+      data-testid="bioracle-root"
+    >
+      {/* Auto-Stealth Ghost Silver ripple — proactive protection overlay */}
+      {autoStealth.active && (
+        <div className="bo-ghost-ripple" data-testid="ghost-ripple" aria-hidden>
+          <span className="r r1" />
+          <span className="r r2" />
+          <span className="r r3" />
+          <span className="r r4" />
+          <span className="ghost-pill">
+            <span className="dot" />
+            AUTO-STEALTH · {Math.round((Date.now() - autoStealth.engagedSince) / 1000)}s · {autoStealth.runtime}
+          </span>
+        </div>
+      )}
+
+      {/* Reactive Universal Stealth — fires on EMF spike + intent (V13 behaviour) */}
+      {intent.stealthEngaged && (
+        <div className="bo-universal-stealth" data-testid="universal-stealth-banner">
+          <span className="dot" />
+          <span className="lbl">UNIVERSAL STEALTH · {mag.state.microtesla.toFixed(1)} µT · intent {intent.intent.toFixed(2)}</span>
+        </div>
+      )}
+
       {scene === "dashboard" && (
         <Dashboard
           onOpen={openTile}
+          profile={profile}
+          setProfile={setProfile}
           health={dashboardChip}
           stealthEngaged={intent.stealthEngaged}
         />
@@ -82,7 +139,8 @@ function App() {
           lectinSignature={0}
           emfMicrotesla={mag.state.microtesla}
           syntheticInterference={mag.state.syntheticInterference}
-          haptic={haptics.thump}
+          haptic={profile === "cruise" ? industrialThump : haptics.thump}
+          profile={profile}
         />
       )}
 
@@ -94,15 +152,21 @@ function App() {
         <EmergencyScene
           accent={ACCENTS.emergency}
           onClose={back}
-          haptic={haptics.thump}
+          haptic={profile === "cruise" ? industrialThump : haptics.thump}
           lectinSignature={0}
           emfMicrotesla={mag.state.microtesla}
           syntheticInterference={mag.state.syntheticInterference}
         />
       )}
 
-      {scene === "stealth" && (
-        <StealthScene accent={ACCENTS.stealth} onClose={back} />
+      {scene === "stealth" && <StealthScene accent={ACCENTS.stealth} onClose={back} autoStealth={autoStealth} intent={intent} />}
+
+      {scene === "cruise" && (
+        <CruiseScene accent={ACCENTS.cruise} onClose={back} industrialThump={industrialThump} />
+      )}
+
+      {scene === "beauty" && (
+        <BeautyScene accent={ACCENTS.beauty} onClose={back} />
       )}
 
       {scene === "vial" && (

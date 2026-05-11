@@ -1,21 +1,22 @@
 import React, { useRef, useState } from "react";
 import { useFrontCamera } from "@/hardware/useFrontCamera";
-import { analyseTongue, type TongueReading } from "@/lib/imageAnalysis";
+import { analyseTongue, type TongueReading, type ScanLighting } from "@/lib/imageAnalysis";
 
 interface Props {
   onComplete: (reading: TongueReading) => void;
   onSkip: () => void;
   accent: string;
+  lighting?: ScanLighting;
 }
 
-const TongueScan: React.FC<Props> = ({ onComplete, onSkip, accent }) => {
+const TongueScan: React.FC<Props> = ({ onComplete, onSkip, accent, lighting = "indoor" }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cam = useFrontCamera(videoRef);
   const [reading, setReading] = useState<TongueReading | null>(null);
 
   const handleCapture = () => {
     const img = cam.capture();
-    if (img) setReading(analyseTongue(img));
+    if (img) setReading(analyseTongue(img, lighting));
   };
 
   return (

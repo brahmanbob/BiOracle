@@ -21,8 +21,14 @@ export interface IntentState {
   motionStability: number;
   magStability: number;
   visibility: boolean;
-  /** True iff EMF spike + high intent (contextual stealth target) */
+  /** True iff EMF spike + high intent (reactive contextual stealth target) */
   stealthEngaged: boolean;
+  /** True iff phone is static AND screen-on AND user dwelling (proactive Auto-Stealth) */
+  autoStealthEngaged: boolean;
+  /** Raw motion variance (m/s² standard deviation) */
+  motionVariance: number;
+  /** Raw mag variance (µT standard deviation over rolling window) */
+  magVariance: number;
   lastTouchSec: number;
 }
 
@@ -37,6 +43,9 @@ export function useIntent(magMicrotesla: number | null): IntentState {
     magStability: 1,
     visibility: true,
     stealthEngaged: false,
+    autoStealthEngaged: false,
+    motionVariance: 0,
+    magVariance: 0,
     lastTouchSec: 0,
   });
 
@@ -90,19 +99,23 @@ export function useIntent(magMicrotesla: number | null): IntentState {
       // motion stability
       const m = motionBuf.current;
       let motionStability = 1;
+      let motionVariance = 0;
       if (m.length > 5) {
         const mean = m.reduce((a, b) => a + b, 0) / m.length;
         const v = m.reduce((a, b) => a + (b - mean) ** 2, 0) / m.length;
-        motionStability = Math.max(0, Math.min(1, 1 - Math.sqrt(v) / 4));
+        motionVariance = Math.sqrt(v);
+        motionStability = Math.max(0, Math.min(1, 1 - motionVariance / 4));
       }
 
       // mag stability (low variance = stable)
       const mg = magBuf.current;
       let magStability = 1;
+      let magVariance = 0;
       if (mg.length > 5) {
         const mean = mg.reduce((a, b) => a + b, 0) / mg.length;
         const v = mg.reduce((a, b) => a + (b - mean) ** 2, 0) / mg.length;
-        magStability = Math.max(0, Math.min(1, 1 - Math.sqrt(v) / 30));
+        magVariance = Math.sqrt(v);
+        magStability = Math.max(0, Math.min(1, 1 - magVariance / 30));
       }
 
       const visibility = typeof document !== "undefined" && document.visibilityState === "visible";
@@ -111,11 +124,34 @@ export function useIntent(magMicrotesla: number | null): IntentState {
         dwell * 0.4 + motionStability * 0.3 + magStability * 0.15 + (visibility ? 0.15 : 0),
       );
 
+      // ---- Reactive Stealth (V13): EMF spike WHILE focused ----
       const stealthEngaged =
         (typeof magMicrotesla === "number" && magMicrotesla > SPIKE_T) && intent > 0.6;
 
-      setState({ intent: round(intent, 3), dwell: round(dwell, 3), motionStability: round(motionStability, 3),
-                 magStability: round(magStability, 3), visibility, stealthEngaged, lastTouchSec: round(lastTouchSec, 1) });
+      // ---- Auto-Stealth (Trinity Invention) ----
+      //   Magnetometer variance < 0.05 µT  → phone hasn't moved through the field
+      //   Motion variance < 0.25 m/s²       → no shake / typing
+      //   Visibility = visible              → user is reading
+      //   Dwell > 4 s                       → user has settled in
+      const autoStealthEngaged =
+        magVariance > 0 &&
+        magVariance < 0.05 &&
+        motionVariance < 0.25 &&
+        visibility &&
+        lastTouchSec > 4;
+
+      setState({
+        intent: round(intent, 3),
+        dwell: round(dwell, 3),
+        motionStability: round(motionStability, 3),
+        magStability: round(magStability, 3),
+        visibility,
+        stealthEngaged,
+        autoStealthEngaged,
+        motionVariance: round(motionVariance, 3),
+        magVariance: round(magVariance, 3),
+        lastTouchSec: round(lastTouchSec, 1),
+      });
     }, 1000);
     return () => clearInterval(id);
   }, [magMicrotesla]);

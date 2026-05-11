@@ -14,6 +14,8 @@
 import type { ScleraReading, TongueReading } from "@/lib/imageAnalysis";
 import type { TriageVerdict } from "@/SovereignLogic";
 
+export type Profile = "sovereign" | "cruise" | "beauty";
+
 export interface RitualScans {
   sclera: ScleraReading | null;
   tongue: TongueReading | null;
@@ -24,6 +26,8 @@ export interface RitualScans {
   vascularAsymmetry: number;
   lectinSignature: number;
   syntheticInterference: boolean;
+  /** profile selects banter voice; defaults to sovereign */
+  profile?: Profile;
 }
 
 export interface RemedyCard {
@@ -209,13 +213,9 @@ export function generateRemedy(scans: RitualScans, banterText: string): RemedyCa
   ];
   const ritual = ritualPool[Math.floor(Date.now() / 86400000) % ritualPool.length];
 
-  // ---- Banter voice ----
-  const banter =
-    band === "urgent"
-      ? "Carrier — I see it. The signal is loud. We move."
-      : band === "watch"
-      ? "I hear the system whispering. Not loud yet. Worth catching now."
-      : "Body sounds clean today. We tune, we don't react.";
+  // ---- Banter voice (profile-aware) ----
+  const profile: Profile = scans.profile ?? "sovereign";
+  const banter = bantersByProfile(profile, band);
 
   return {
     banter,
@@ -226,4 +226,25 @@ export function generateRemedy(scans: RitualScans, banterText: string): RemedyCa
     echoedSymptoms: symptoms,
     flags,
   };
+}
+
+function bantersByProfile(profile: Profile, band: RemedyCard["band"]): string {
+  const lib: Record<Profile, Record<RemedyCard["band"], string>> = {
+    sovereign: {
+      urgent: "Carrier — I see it. The signal is loud. We move.",
+      watch:  "I hear the system whispering. Not loud yet. Worth catching now.",
+      stable: "Body sounds clean today. We tune, we don't react.",
+    },
+    cruise: {
+      urgent: "Hard stop. CNS is red. Rack the bar — recovery first, ego second.",
+      watch:  "Heads up — system's at 70 %. Drop intensity 1 notch, finish strong.",
+      stable: "Green light. Send the next set. Make it crisp.",
+    },
+    beauty: {
+      urgent: "Pause, love. The skin is telling us something — let's listen before we layer.",
+      watch:  "A whisper from the dermis. Hydrate, breathe, we adjust the ritual tonight.",
+      stable: "You're luminous today. Maintain the cadence — sleep, water, sunlight.",
+    },
+  };
+  return lib[profile][band];
 }
