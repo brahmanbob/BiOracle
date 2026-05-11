@@ -1,72 +1,72 @@
-# BiOracle — Product Requirements
+# BiOracle — Sovereign Ritual V13
 
 ## Original problem statement
 BiOracle (brahmanbob/BiOracle) — sovereign biological-triage app for Samsung S21.
 
 ## Crack roadmap
-- **Crack #1 — Shell** ✅ — SovereignLogic + Obsidian/Gold Health Battery + Triage Dashboard + ledger.
-- **Crack #2 — Sensor wiring** ✅ — Live PPG / mic / magnetometer with Synthetic Interference badge.
-- **Crack #3 — Golden Relic (Unlimited)** ✅ (2026-05-11) — Neumorphic Glassmorphism, 3D Liquid Vial slosh, Haptic Engine, Spectrogram heatmap, APG Vascular Age, Gold-on-Obsidian PDF + QR.
+- Crack #1 Shell · #2 Sensors · #3 Golden Relic — superseded.
+- **V13 Sovereign Ritual** ✅ (2026-05-11) — full UI rewrite to Bento + Immersion + Wizard + Banter + Swipe Vial + Contextual Stealth.
 
-## Architecture
-- **Frontend**: React 19 + TypeScript (CRA + CRACO). Canvas-based Liquid Vial + Spectrogram. jsPDF + qrcode for clinical handoff. Theme `bioracle.css` (Obsidian / Gold / Neumorphic glass; Cormorant Garamond + JetBrains Mono).
-- **Backend**: FastAPI + Motor (MongoDB) — sovereign ledger with arbitrary `raw` sensor traces.
+## V13 Architecture
+- **Scene state machine** in `App.tsx` (`useState<Scene>`) — no router lib. Scenes: `dashboard` · `medical` · `digestion` · `emergency` · `stealth` · `vial`.
+- **Bento Dashboard** (`scenes/Dashboard.tsx`) — 4 tiles only, exact accents:
+  - Medical · Sky Blue `#6dc4dd`
+  - Digestion · Amber `#f5a623`
+  - Emergency · Blood Red `#ff5b50` (pulsing)
+  - Stealth · Silver `#cfcfd9`
+- **Full-screen immersion** — tapping a tile replaces the dashboard entirely; animated fade+blur entry.
+- **Swipe-down anywhere on dashboard** → `LiquidBatteryFullscreen` overlay (zoomed 1.4× vial); swipe-up or tap to close. (`hardware/useSwipeGesture.ts`)
 
-## Core files
-- `frontend/src/SovereignLogic.ts` — `fingerprintToABO`, `stomachAcousticAnalysis`, `emergencyTriage`.
-- `frontend/src/hardware/usePPGScanner.ts` — env-cam + torch + canvas red-channel → HR / HRV / amplitude → asymmetry. Emits per-beat `onBeat()` for haptic thump and `lastBeatTs` for caustic flash.
-- `frontend/src/hardware/useStomachMic.ts` — AnalyserNode → time-domain feeds `stomachAcousticAnalysis`, frequency-domain → sub-50 Hz lectin signature. Exposes the live AnalyserNode for the Spectrogram.
-- `frontend/src/hardware/useMagnetometer.ts` — Generic Sensor `Magnetometer({frequency:10})` → µT magnitude; µT > 65 lights the Synthetic Interference badge.
-- `frontend/src/hardware/useHaptics.ts` — wraps `navigator.vibrate` with S21-tuned patterns: `softTap` (20ms), `thump` (28ms, per beat), `heavyClick` ([90,35,140] for Stealth), `criticalBuzz`, `sovereignChime`.
-- `frontend/src/lib/vascularAge.ts` — Takazawa APG analysis: second derivative of PPG → a/b/c/d/e landmark detection → Aging Index `(b-c-d-e)/a` → Vascular Age (18..95 y).
-- `frontend/src/lib/pdfReport.ts` — A5 portrait Gold-on-Obsidian jsPDF: header sigil, verdict block with flags, 10-row sensor telemetry table, QR (gold-on-obsidian) encoding `${BACKEND_URL}/api/ledger/${scanId}`.
-- `frontend/src/components/LiquidVialBattery.tsx` — Canvas rAF loop: dual sine-wave meniscus, slosh physics (tilt momentum + damping), gold gradient + caustic spotlight pulsing on each beat, bubbles, gold rim highlights, vial cap, EMF lattice + red rim flash on synthetic interference.
-- `frontend/src/components/Spectrogram.tsx` — rolling FFT-magnitude heatmap. Color ramp obsidian-violet → magenta → amber → gold. Sub-50 Hz Lectin band highlighted with a magenta rail. Scrolls left 1px/frame.
-- `frontend/src/components/TriageDashboard.tsx` — 4 glass cards: Vascular Triage (sparkline + APG row), Lectin · Stomach (live spectrogram), EMF Stealth, Acoustic State.
-- `frontend/src/App.tsx` — composes all hooks + haptics + critical-state one-shot alarm + Stealth toggle + Print PDF for Medic flow.
-- `frontend/app.json` — Expo manifest with CAMERA / FLASHLIGHT / RECORD_AUDIO / MAGNETOMETER permissions for future native build.
+## Ritual Wizard (Medical scene)
+Sequential pipeline with dot-stepper:
+1. `wizard/RetinolScan.tsx` — front camera → `analyseSclera()` → yellowness/redness/dryness → indicator `{stable|watch|irritated|jaundiced}`.
+2. `wizard/TongueScan.tsx` — front camera → `analyseTongue()` → hue/coating/redness → TCM-ish state `{healthy|qi-deficient|heat|stasis|damp-heat}`.
+3. `wizard/BloodScan.tsx` — rear camera + torch PPG (12s) → HR, HRV, asymmetry, **APG vascular age**.
+4. `wizard/BanterCompute.tsx` — conversational Oracle persona, accepts free text symptoms, runs `generateRemedy()` → **Remedy Card** with 3 prioritized actions + today's ritual + Print PDF for Medic.
 
-## Sensor → SovereignLogic mapping
-| Input               | Source                                                  | Trigger                              |
-|---------------------|---------------------------------------------------------|--------------------------------------|
-| `lectin`            | `useStomachMic.lectinSignature` (0.7·subSonic + 0.3·events) | ≥ 0.75 → CRITICAL              |
-| `vascularAsymmetry` | `usePPGScanner.asymmetry` = 0.6·HRV_norm + 0.4·lowSNR    | ≥ 0.70 → CRITICAL                  |
-| `emf`               | `useMagnetometer.emfIndex` = (µT-30)/120                 | µT > 65 → synthetic-interference   |
-| `heartRate`         | `usePPGScanner.heartRate`                                | drives vial slosh + haptic thump   |
-| `vascularAge`       | `vascularAge.ts` Takazawa APG on raw PPG                 | clinical readout, not a triage gate |
+## Remedy Engine
+`lib/remedyEngine.ts` — deterministic, sovereign (no LLM, no network call). Fuses all 3 scans + free-text banter keyword detection (`fatigue/pain/headache/digestion/sleep/anxiety/bleeding/fever/vision`). Output: `{banter, topConcern, band: stable|watch|urgent, actions[], ritual, echoedSymptoms, flags}`. Bands drive PDF visibility (Print PDF for Medic appears only when band ≠ stable).
 
-## Haptic vocabulary
-- Stealth toggle → `heavyClick` `[90, 35, 140]` (heavy mechanical click)
-- Each PPG beat → `thump` 28 ms
-- Critical verdict (one-shot) → `criticalBuzz` `[180,70,180,70,320]`
-- Sovereign-override → `sovereignChime` `[240,60,60,60,240,60,60,60,520]`
-- Generic taps → `softTap` 20 ms
+## Contextual Stealth
+`hardware/useIntent.ts` fuses:
+- `dwell` — fraction of last 30s with no scroll/touch
+- `motionStability` — DeviceMotion accel variance inverted
+- `magStability` — µT variance inverted
+- `visibility` — `document.visibilityState`
 
-## PDF report
-- A5 portrait Gold-on-Obsidian (fits a clinician's pocket).
-- Sigil + verdict + score + directive + colour-coded flag pills.
-- 10-row sensor telemetry table (HR / HRV / amp / vascular age / asymmetry / lectin sig / sub-50 Hz / acoustic state / EMF / ABO).
-- Gold-framed QR encoding `${BACKEND_URL}/api/ledger/${scanId}`.
-- Auto-commits a ledger entry if no scan id exists yet, then downloads `bioracle-{id8}-{level}.pdf`.
-- Triggered by the **Print PDF for Medic** button which gains a `critical-pulse` red glow when `verdict.critical`.
+→ `intent` 0..1 score. `stealthEngaged = (µT > 65) AND (intent > 0.6)` — proactively flags EMF interference *only when the carrier is focused* (real attack vector, not ambient noise). Surfaces as red-pulsing app filter + Stealth-scene alert banner.
+
+## Image analysis (`lib/imageAnalysis.ts`)
+- Sclera: central horizontal strip mean RGB, yellow/red votes, luminance variance for dryness proxy.
+- Tongue: central square mean RGB, saturation, high-luminance low-saturation share → coating; redness vote.
+
+## Preserved from previous cracks
+- `SovereignLogic.ts` — `fingerprintToABO`, `stomachAcousticAnalysis`, `emergencyTriage`
+- `hardware/usePPGScanner.ts` · `useStomachMic.ts` · `useMagnetometer.ts` · `useHaptics.ts`
+- `lib/vascularAge.ts` (Takazawa APG)
+- `lib/pdfReport.ts` (Gold-on-Obsidian A5 PDF + QR ledger)
+- `components/LiquidVialBattery.tsx` (used inside `scenes/LiquidBatteryFullscreen`)
+- `components/Spectrogram.tsx` (used inside Digestion scene)
+- Backend `/api/triage/scan` + `/api/ledger/{id}` unchanged.
+- PWA `manifest.json` + `sw.js` + procedural gold-sigil icons unchanged.
 
 ## Verified (2026-05-11)
-- Liquid Vial canvas animates (gold slosh + caustics) — visual confirmed.
-- Neumorphic glass buttons render with backdrop blur + dual inset shadows.
-- Stealth Mode dims layout + flips toggle indicator red.
-- Backend round-trips enriched payload (raw.ppg, raw.apg, raw.mag, raw.mic) at 200; ledger GET returns vascularAge 58y, µT 81.2, etc.
-- TypeScript compile clean (No issues found).
+- All 6 testIDs for bento tiles present
+- Dashboard genuinely vanishes on tile open (`dashboard while in immersion: 0`)
+- Medical immersion lands on `step-retinol` with full stepper visible
+- Stealth scene renders 6 gauges + graceful "Magnetometer unavailable" fallback
+- TypeScript: No issues found · webpack compiled successfully
 
-## Field-test ritual (S21)
-1. Open preview URL in **standalone Chrome tab** (not iframe).
-2. Tap **Run Full Scan**, grant camera + mic + magnetometer perms.
-3. Place fingertip over rear lens (torch will engage) → 12 s scan computes HR, HRV, Vascular Age (APG), asymmetry.
-4. Hold device against abdomen 15 s — spectrogram lights up sub-50 Hz Lectin band in magenta if inflamed.
-5. Walk past Wi-Fi router / hold phone-to-head — µT > 65 triggers SYNTHETIC INTERFERENCE badge.
-6. Tap **Print PDF for Medic** → ledger commit → A5 PDF downloads with QR.
-7. Toggle **STEALTH** when you need a heavy mechanical haptic click + dimmed UI.
+## Field-test ritual
+1. Open URL in **standalone Chrome on S21** (not iframe).
+2. Dashboard appears with 4 tiles.
+3. Swipe down → full-screen Liquid Vial.
+4. Tap **Medical** → Retinol → Tongue → Blood → Banter → Remedy Card → Print PDF for Medic if urgent/watch band.
+5. Tap **Digestion** → mic + spectrogram + lectin signature.
+6. Tap **Emergency** → PPG triage + vascular age + bleeding-suspect flag + PDF.
+7. Tap **Stealth** → watch EMF × Intent fusion; spike during focus = red alert banner.
 
-## Next / Backlog
-- 5-scan rolling local baseline so triage flags personal deviation, not absolute thresholds.
-- Native Expo build to access raw Bluetooth/IR sensors beyond browser scope.
-- Optional: signed/encrypted ledger entries so the QR PDF proves provenance.
+## Backlog
+- Wire `localStorage` rolling baseline (5 last scans) for per-user deviation triage.
+- Optional Ed25519-signed ledger entries (provenance/tamper for medic).
+- Native Capacitor/Expo build via PWABuilder TWA — `app.json` permissions already aligned.
