@@ -270,6 +270,189 @@ async def history(limit: int = 20):
     return rows
 
 
+@api_router.get("/ledger/{scan_id}")
+async def get_ledger(scan_id: str):
+    row = await db.scans.find_one({"id": scan_id}, {"_id": 0})
+    if not row:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    return row
+
+
+# ============ PDF REPORT (Crack #2) ============
+class ReportRequest(BaseModel):
+    bpm: Optional[float] = None
+    asymmetry: float = 0.0
+    acoustic: Optional[dict] = None  # {intensity, status, level}
+    fingerprint: Optional[dict] = None  # {pattern, blood_type}
+    battery_score: int = 0
+    emf_intensity: Optional[float] = None
+    notes: Optional[str] = None
+
+
+@api_router.post("/report")
+async def generate_report(payload: ReportRequest):
+    """Generate a gold-on-obsidian PDF medic report with QR code linking to the ledger."""
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.colors import HexColor
+    import qrcode
+
+    # 1. Persist a ledger row first so the QR can point to it
+    scan_id = str(uuid.uuid4())
+    ledger_doc = ScanRecord(
+        id=scan_id,
+        kind="report",
+        payload=payload.model_dump(),
+    ).model_dump()
+    await db.scans.insert_one(ledger_doc)
+
+    # Public base URL — use REACT_APP_BACKEND_URL pattern; fall back to localhost
+    public_base = os.environ.get("PUBLIC_BASE_URL", "")
+    if not public_base:
+        # The frontend already knows its backend URL; we just need the path.
+        public_base = "/api"
+    qr_target = f"{public_base}/ledger/{scan_id}" if public_base.startswith("http") else f"{public_base}/ledger/{scan_id}"
+
+    qr_img = qrcode.make(qr_target)
+    qr_buf = io.BytesIO()
+    qr_img.save(qr_buf, format="PNG")
+    qr_buf.seek(0)
+
+    pdf_buf = io.BytesIO()
+    c = canvas.Canvas(pdf_buf, pagesize=A4)
+    width, height = A4
+
+    GOLD = HexColor("#D4AF37")
+    GOLD_DIM = HexColor("#AA8C2C")
+    OBSIDIAN = HexColor("#050505")
+    WHITE = HexColor("#FFFFFF")
+    RED = HexColor("#FF3B30")
+
+    # Black background
+    c.setFillColor(OBSIDIAN)
+    c.rect(0, 0, width, height, fill=1, stroke=0)
+
+    # Gold border frame
+    c.setStrokeColor(GOLD)
+    c.setLineWidth(1.2)
+    c.rect(10 * mm, 10 * mm, width - 20 * mm, height - 20 * mm, fill=0, stroke=1)
+    c.setLineWidth(0.4)
+    c.rect(13 * mm, 13 * mm, width - 26 * mm, height - 26 * mm, fill=0, stroke=1)
+
+    # Header
+    c.setFillColor(GOLD)
+    c.setFont("Times-Roman", 22)
+    c.drawString(20 * mm, height - 28 * mm, "BIORACLE  V12")
+    c.setFont("Courier", 8)
+    c.drawString(20 * mm, height - 33 * mm, "SOVEREIGN  CLINICAL  REPORT")
+    c.setFillColor(WHITE)
+    c.setFont("Courier", 8)
+    c.drawRightString(width - 20 * mm, height - 28 * mm, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"))
+    c.drawRightString(width - 20 * mm, height - 33 * mm, f"SCAN ID: {scan_id[:13]}")
+
+    # Divider
+    c.setStrokeColor(GOLD_DIM)
+    c.line(20 * mm, height - 38 * mm, width - 20 * mm, height - 38 * mm)
+
+    # Sovereign Charge block
+    y = height - 50 * mm
+    c.setFillColor(GOLD)
+    c.setFont("Courier-Bold", 9)
+    c.drawString(20 * mm, y, "SOVEREIGN  CHARGE")
+    c.setFillColor(RED if payload.battery_score < 30 else WHITE)
+    c.setFont("Times-Roman", 36)
+    c.drawString(20 * mm, y - 14 * mm, f"{payload.battery_score}%")
+
+    # Critical banner
+    critical = payload.battery_score < 30 or payload.asymmetry > 0.3 or (
+        payload.acoustic and payload.acoustic.get("level") in ("Critical", "High")
+    )
+    if critical:
+        c.setFillColor(RED)
+        c.rect(70 * mm, y - 12 * mm, 110 * mm, 10 * mm, fill=1, stroke=0)
+        c.setFillColor(WHITE)
+        c.setFont("Courier-Bold", 10)
+        c.drawCentredString(125 * mm, y - 9 * mm, "CRITICAL  SIGNAL  DETECTED")
+
+    # Sensor table
+    y = height - 80 * mm
+    c.setStrokeColor(GOLD_DIM)
+    c.line(20 * mm, y + 2 * mm, width - 20 * mm, y + 2 * mm)
+    c.setFillColor(GOLD)
+    c.setFont("Courier-Bold", 9)
+    c.drawString(20 * mm, y - 4 * mm, "SENSOR  READOUT")
+    c.setFont("Courier", 9)
+    c.setFillColor(WHITE)
+    rows = []
+    if payload.bpm is not None:
+        rows.append(("Heart Rate (PPG)", f"{payload.bpm:.0f} bpm"))
+    rows.append(("Vascular Asymmetry", f"{payload.asymmetry:.3f}"))
+    if payload.acoustic:
+        rows.append(("Acoustic Intensity", f"{payload.acoustic.get('intensity', 0):.3f}"))
+        rows.append(("Acoustic Status", payload.acoustic.get("status", "—")))
+        rows.append(("Acoustic Level", payload.acoustic.get("level", "—")))
+    if payload.fingerprint:
+        rows.append(("Fingerprint Pattern", payload.fingerprint.get("pattern", "—")))
+        rows.append(("Blood Type (ABO)", payload.fingerprint.get("blood_type", "—")))
+    if payload.emf_intensity is not None:
+        rows.append(("EMF Magnitude (µT)", f"{payload.emf_intensity:.1f}"))
+    rows.append(("Sovereign Charge", f"{payload.battery_score}/100"))
+
+    rh = 6 * mm
+    for i, (k, v) in enumerate(rows):
+        ry = y - 12 * mm - i * rh
+        c.setFillColor(GOLD_DIM)
+        c.drawString(22 * mm, ry, k.upper())
+        c.setFillColor(WHITE)
+        c.drawRightString(width - 22 * mm, ry, str(v))
+        c.setStrokeColor(HexColor("#1a1a1a"))
+        c.setLineWidth(0.2)
+        c.line(20 * mm, ry - 2 * mm, width - 20 * mm, ry - 2 * mm)
+
+    # Oracle notes
+    if payload.notes:
+        ny = y - 12 * mm - len(rows) * rh - 10 * mm
+        c.setFillColor(GOLD)
+        c.setFont("Courier-Bold", 9)
+        c.drawString(20 * mm, ny, "ORACLE  INTERPRETATION")
+        c.setFillColor(WHITE)
+        c.setFont("Times-Italic", 10)
+        # Word-wrap
+        from textwrap import wrap
+        for j, line in enumerate(wrap(payload.notes, 80)):
+            c.drawString(20 * mm, ny - 6 * mm - j * 5 * mm, line)
+
+    # QR code bottom-right
+    from reportlab.lib.utils import ImageReader
+    qr_buf.seek(0)
+    qr_reader = ImageReader(qr_buf)
+    qr_size = 35 * mm
+    c.drawImage(qr_reader, width - 20 * mm - qr_size, 22 * mm, qr_size, qr_size, mask='auto')
+    c.setFillColor(GOLD_DIM)
+    c.setFont("Courier", 6)
+    c.drawRightString(width - 20 * mm, 18 * mm, "SCAN FOR RAW LEDGER")
+
+    # Footer
+    c.setFillColor(GOLD_DIM)
+    c.setFont("Courier", 6)
+    c.drawString(20 * mm, 15 * mm, "BIORACLE V12  /  SOVEREIGN INSTRUMENT  /  NOT A SUBSTITUTE FOR MEDICAL DIAGNOSIS")
+
+    c.showPage()
+    c.save()
+    pdf_buf.seek(0)
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="bioracle-{scan_id[:8]}.pdf"',
+            "X-Scan-Id": scan_id,
+        },
+    )
+
+
 # ============ GEMINI INTERPRETATION ============
 async def gemini_interpret_acoustic(intensity: float, status: str, level: str) -> str:
     """Use Gemini via emergentintegrations to produce a sovereign-tone interpretation."""

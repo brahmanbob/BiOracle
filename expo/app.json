@@ -2,29 +2,30 @@
   "expo": {
     "name": "BiOracle V12",
     "slug": "bioracle-v12",
-    "version": "12.0.0",
+    "version": "12.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#050505"
-    },
+    "splash": { "backgroundColor": "#050505" },
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "BiOracle uses the microphone to analyze stomach acoustics.",
-        "NSCameraUsageDescription": "BiOracle uses the camera to capture fingerprints for ABO inference."
+        "NSCameraUsageDescription": "BiOracle uses the camera + flash for fingerprint capture and vascular PPG."
       }
     },
     "android": {
       "package": "com.brahmanbob.bioraclev12",
       "permissions": [
         "RECORD_AUDIO",
-        "CAMERA"
+        "CAMERA",
+        "FLASHLIGHT"
       ]
     },
     "plugins": [
       "expo-image-picker",
-      "expo-av"
+      "expo-av",
+      "expo-camera",
+      "expo-sensors"
     ]
   }
 }
