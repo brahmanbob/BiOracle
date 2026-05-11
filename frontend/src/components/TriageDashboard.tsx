@@ -1,5 +1,6 @@
 import React from "react";
 import SignalCard from "@/components/SignalCard";
+import Spectrogram from "@/components/Spectrogram";
 import type { TriageVerdict } from "@/SovereignLogic";
 
 interface SensorPanelProps {
@@ -13,11 +14,15 @@ interface SensorPanelProps {
   ppgSignal: number[];
   ppgTorch: boolean;
   ppgElapsed: number;
+  vascularAge: number;
+  agingIndex: number;
+  stiffnessIndex: number;
   startPpg: () => void;
   stopPpg: () => void;
   // Mic
   micActive: boolean;
   micError: string | null;
+  micAnalyser: AnalyserNode | null;
   micAcousticState: string;
   micAcousticBpm: number;
   micSubSonic: number;
@@ -35,7 +40,6 @@ interface SensorPanelProps {
   magEmfIndex: number;
   startMag: () => void;
   stopMag: () => void;
-  // verdict for footer
   verdict: TriageVerdict;
 }
 
@@ -47,7 +51,7 @@ const sev = (x: number): "stable" | "elevated" | "critical" => {
 
 const Sparkline: React.FC<{ data: number[] }> = ({ data }) => {
   if (!data || data.length < 2) return null;
-  const w = 220, h = 38;
+  const w = 240, h = 44;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
@@ -60,6 +64,13 @@ const Sparkline: React.FC<{ data: number[] }> = ({ data }) => {
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="bo-spark" data-testid="ppg-sparkline">
+      <defs>
+        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffd966" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#ffd966" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polyline points={`0,${h} ${pts} ${w},${h}`} fill="url(#spark-fill)" stroke="none" />
       <polyline points={pts} fill="none" stroke="#ffd966" strokeWidth="1.5" />
     </svg>
   );
@@ -67,8 +78,9 @@ const Sparkline: React.FC<{ data: number[] }> = ({ data }) => {
 
 const TriageDashboard: React.FC<SensorPanelProps> = ({
   ppgActive, ppgError, ppgHeartRate, ppgHrv, ppgAmplitude, ppgAsymmetry, ppgSignal, ppgTorch, ppgElapsed,
+  vascularAge, agingIndex, stiffnessIndex,
   startPpg, stopPpg,
-  micActive, micError, micAcousticState, micAcousticBpm, micSubSonic, micLectinSignature,
+  micActive, micError, micAnalyser, micAcousticState, micAcousticBpm, micSubSonic, micLectinSignature,
   startMic, stopMic,
   magAvailable, magActive, magError, magMicrotesla, magBaseline, magSynthetic, magSpikes, magEmfIndex,
   startMag, stopMag,
@@ -78,12 +90,12 @@ const TriageDashboard: React.FC<SensorPanelProps> = ({
     <section data-testid="triage-dashboard">
       <div className="bo-dashboard">
 
-        {/* --- Vascular / PPG --- */}
+        {/* --- Vascular / PPG + APG vascular age --- */}
         <SignalCard
-          label="Vascular Asymmetry"
+          label="Vascular Triage"
           channel="CH · 02 · PPG"
           value={(ppgAsymmetry * 100).toFixed(0)}
-          unit="%"
+          unit="% asym"
           intensity={ppgAsymmetry}
           severity={sev(ppgAsymmetry)}
           footnote={
@@ -91,23 +103,40 @@ const TriageDashboard: React.FC<SensorPanelProps> = ({
               ? `Camera · ${ppgError}`
               : ppgActive
               ? `Live · ${ppgHeartRate || 0}bpm · HRV ${ppgHrv}ms · amp ${ppgAmplitude.toFixed(2)} · ${ppgTorch ? "torch on" : "no torch"} · ${ppgElapsed.toFixed(1)}s`
-              : "Tap Scan → place fingertip over rear lens + flash"
+              : "Tap Scan → place fingertip over rear lens + flash for 12 s"
           }
           testId="signal-vascular"
         >
           <Sparkline data={ppgSignal} />
+
+          {/* Vascular Age — APG second-derivative readout */}
+          <div className="bo-apg-row" data-testid="apg-readout">
+            <div className="bo-apg-cell">
+              <span className="lbl">Vascular Age</span>
+              <span className="val">{vascularAge ? `${vascularAge} y` : "—"}</span>
+            </div>
+            <div className="bo-apg-cell">
+              <span className="lbl">AGI</span>
+              <span className="val">{vascularAge ? agingIndex.toFixed(2) : "—"}</span>
+            </div>
+            <div className="bo-apg-cell">
+              <span className="lbl">b/a</span>
+              <span className="val">{vascularAge ? stiffnessIndex.toFixed(2) : "—"}</span>
+            </div>
+          </div>
+
           <div className="bo-mini-controls">
             {!ppgActive ? (
-              <button className="bo-btn-mini" onClick={startPpg} data-testid="btn-start-ppg">▶ PPG Scan</button>
+              <button className="bo-glass-mini" onClick={startPpg} data-testid="btn-start-ppg">▶ PPG Scan</button>
             ) : (
-              <button className="bo-btn-mini ghost" onClick={stopPpg} data-testid="btn-stop-ppg">■ Stop</button>
+              <button className="bo-glass-mini ghost" onClick={stopPpg} data-testid="btn-stop-ppg">■ Stop</button>
             )}
           </div>
         </SignalCard>
 
-        {/* --- Lectin / Stomach Mic --- */}
+        {/* --- Lectin / Stomach Mic + Spectrogram --- */}
         <SignalCard
-          label="Lectin · Stomach Mic"
+          label="Lectin · Stomach"
           channel="CH · 01 · AUDIO"
           value={micLectinSignature.toFixed(2)}
           unit="lectin-sig"
@@ -118,15 +147,16 @@ const TriageDashboard: React.FC<SensorPanelProps> = ({
               ? `Mic · ${micError}`
               : micActive
               ? `${micAcousticState} · ${micAcousticBpm.toFixed(1)} ev/min · sub-50Hz ${(micSubSonic * 100).toFixed(0)}%`
-              : "Tap Capture → hold mic against abdomen for 15s"
+              : "Tap Capture → hold mic against abdomen for 15 s"
           }
           testId="signal-lectin"
         >
+          <Spectrogram analyser={micAnalyser} />
           <div className="bo-mini-controls">
             {!micActive ? (
-              <button className="bo-btn-mini" onClick={startMic} data-testid="btn-start-mic">▶ Mic Capture</button>
+              <button className="bo-glass-mini" onClick={startMic} data-testid="btn-start-mic">▶ Mic Capture</button>
             ) : (
-              <button className="bo-btn-mini ghost" onClick={stopMic} data-testid="btn-stop-mic">■ Stop</button>
+              <button className="bo-glass-mini ghost" onClick={stopMic} data-testid="btn-stop-mic">■ Stop</button>
             )}
           </div>
         </SignalCard>
@@ -152,14 +182,14 @@ const TriageDashboard: React.FC<SensorPanelProps> = ({
         >
           <div className="bo-mini-controls">
             {!magActive ? (
-              <button className="bo-btn-mini" onClick={startMag} disabled={!magAvailable} data-testid="btn-start-mag">▶ EMF Scan</button>
+              <button className="bo-glass-mini" onClick={startMag} disabled={!magAvailable} data-testid="btn-start-mag">▶ EMF Scan</button>
             ) : (
-              <button className="bo-btn-mini ghost" onClick={stopMag} data-testid="btn-stop-mag">■ Stop</button>
+              <button className="bo-glass-mini ghost" onClick={stopMag} data-testid="btn-stop-mag">■ Stop</button>
             )}
           </div>
         </SignalCard>
 
-        {/* --- Stomach state read-only echo --- */}
+        {/* --- Acoustic State echo --- */}
         <SignalCard
           label="Acoustic State"
           channel="CH · 04 · MMC"
@@ -175,7 +205,7 @@ const TriageDashboard: React.FC<SensorPanelProps> = ({
           footnote={
             micActive
               ? micAcousticState === "lectin-irritation"
-                ? "Low-freq rumble dominant → lectin signature"
+                ? "Low-freq rumble dominant → lectin signature peaking"
                 : "MMC clicks within healthy band"
               : "Awaiting mic capture"
           }

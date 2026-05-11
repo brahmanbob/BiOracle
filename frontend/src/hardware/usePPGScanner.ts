@@ -38,6 +38,12 @@ export interface PPGState {
   liveHeartRate: number;
   liveAmplitude: number;
   liveSignal: number[];   // last ~150 samples for sparkline
+  /** ms timestamp of most recent detected peak (Date.now()) */
+  lastBeatTs: number;
+  /** raw samples (red - 0.5*green) buffer for APG / vascular age analysis */
+  rawSamples: number[];
+  /** Effective sample rate Hz */
+  sampleRate: number;
   lastResult: PPGResult | null;
   elapsedSec: number;
 }
@@ -46,7 +52,10 @@ const SAMPLE_WIN_SEC = 12;     // analysis window
 const TARGET_FPS = 30;
 const MAX_SAMPLES = SAMPLE_WIN_SEC * TARGET_FPS;
 
-export function usePPGScanner(videoRef: React.RefObject<HTMLVideoElement>) {
+export function usePPGScanner(
+  videoRef: React.RefObject<HTMLVideoElement>,
+  onBeat?: () => void,
+) {
   const [state, setState] = useState<PPGState>({
     active: false,
     permissionError: null,
@@ -55,6 +64,9 @@ export function usePPGScanner(videoRef: React.RefObject<HTMLVideoElement>) {
     liveHeartRate: 0,
     liveAmplitude: 0,
     liveSignal: [],
+    lastBeatTs: 0,
+    rawSamples: [],
+    sampleRate: 30,
     lastResult: null,
     elapsedSec: 0,
   });
@@ -66,6 +78,9 @@ export function usePPGScanner(videoRef: React.RefObject<HTMLVideoElement>) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastFrameTsRef = useRef<number>(0);
   const startTsRef = useRef<number>(0);
+  const lastPeakIndexRef = useRef<number>(-1);
+  const onBeatRef = useRef(onBeat);
+  onBeatRef.current = onBeat;
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -174,14 +189,40 @@ export function usePPGScanner(videoRef: React.RefObject<HTMLVideoElement>) {
         // Live analysis every ~10 frames once we have ≥3s of data
         if (samplesRef.current.length > TARGET_FPS * 3 && samplesRef.current.length % 8 === 0) {
           const live = analysePPG(samplesRef.current);
-          setState((s) => ({
-            ...s,
-            fps,
-            elapsedSec: elapsed,
-            liveHeartRate: live.heartRate,
-            liveAmplitude: live.signalAmplitude,
-            liveSignal: samplesRef.current.slice(-150).map((p) => p.red),
-          }));
+          // Beat detection: if the live result reports a heart rate and the
+          // newest peak is past our previous index, fire onBeat (for haptics).
+          const newPeakIdx = samplesRef.current.length - 1;
+          // Heuristic: live signal slope flipped negative in last 2 samples
+          const arr = samplesRef.current;
+          const a = arr[arr.length - 3]?.red ?? 0;
+          const b = arr[arr.length - 2]?.red ?? 0;
+          const c = arr[arr.length - 1]?.red ?? 0;
+          if (b > a && b > c && newPeakIdx - lastPeakIndexRef.current > Math.round(TARGET_FPS * 0.35) && live.heartRate > 30) {
+            lastPeakIndexRef.current = newPeakIdx;
+            if (onBeatRef.current) onBeatRef.current();
+            setState((s) => ({
+              ...s,
+              fps,
+              elapsedSec: elapsed,
+              liveHeartRate: live.heartRate,
+              liveAmplitude: live.signalAmplitude,
+              liveSignal: samplesRef.current.slice(-150).map((p) => p.red),
+              lastBeatTs: Date.now(),
+              rawSamples: samplesRef.current.map((p) => p.red),
+              sampleRate: fps,
+            }));
+          } else {
+            setState((s) => ({
+              ...s,
+              fps,
+              elapsedSec: elapsed,
+              liveHeartRate: live.heartRate,
+              liveAmplitude: live.signalAmplitude,
+              liveSignal: samplesRef.current.slice(-150).map((p) => p.red),
+              rawSamples: samplesRef.current.map((p) => p.red),
+              sampleRate: fps,
+            }));
+          }
         } else {
           setState((s) => ({
             ...s,

@@ -21,6 +21,8 @@ export interface MicState {
   subSonicRatio: number;          // 0..1 — share of energy in <50Hz band
   lectinSignature: number;        // 0..1 — sub-sonic ratio × event-rate normalised
   acoustic: StomachAcousticSignal | null;
+  /** live AnalyserNode for the Spectrogram visualiser */
+  analyser: AnalyserNode | null;
 }
 
 const ANALYSIS_INTERVAL_MS = 1800;
@@ -35,6 +37,7 @@ export function useStomachMic() {
     subSonicRatio: 0,
     lectinSignature: 0,
     acoustic: null,
+    analyser: null,
   });
 
   const ctxRef = useRef<AudioContext | null>(null);
@@ -56,7 +59,7 @@ export function useStomachMic() {
       ctxRef.current = null;
     }
     analyserRef.current = null;
-    setState((s) => ({ ...s, active: false }));
+    setState((s) => ({ ...s, active: false, analyser: null }));
   }, []);
 
   const start = useCallback(async () => {
@@ -81,7 +84,7 @@ export function useStomachMic() {
       src.connect(analyser);
       analyserRef.current = analyser;
 
-      setState((s) => ({ ...s, active: true, sampleRate: ctx.sampleRate }));
+      setState((s) => ({ ...s, active: true, sampleRate: ctx.sampleRate, analyser }));
 
       timerRef.current = window.setInterval(() => {
         const an = analyserRef.current;

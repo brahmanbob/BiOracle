@@ -1,5 +1,6 @@
 /* ================================================================
-   BiOracle — Obsidian & Gold theme
+   BiOracle — Golden Relic (Crack #3)
+   Obsidian · Gold · Neumorphic Glassmorphism
    ================================================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap");
@@ -9,6 +10,7 @@
   --obsidian-1: #0a0a0d;
   --obsidian-2: #131318;
   --obsidian-3: #1c1c24;
+  --obsidian-4: #232330;
   --obsidian-edge: #2a2a35;
 
   --gold-deep: #8a6a16;
@@ -20,6 +22,11 @@
   --signal-red: #ff3b3b;
   --signal-amber: #f5a623;
   --signal-jade: #2fbf71;
+  --signal-violet: #8a2be2;
+
+  /* Neumorphic light/shadow direction (top-left light) */
+  --neu-light: rgba(255, 217, 102, 0.08);
+  --neu-dark:  rgba(0, 0, 0, 0.85);
 
   --font-serif: "Cormorant Garamond", "Times New Roman", serif;
   --font-mono: "JetBrains Mono", "Courier New", monospace;
@@ -48,13 +55,34 @@ body::before {
   mix-blend-mode: overlay;
 }
 
+/* very faint gold ambient orb top-center */
+body::after {
+  content: "";
+  position: fixed;
+  top: -120px;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.18), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(20px);
+}
+
 /* ---------- Typography ---------- */
 .bo-serif { font-family: var(--font-serif); letter-spacing: 0.02em; }
 .bo-mono  { font-family: var(--font-mono); }
 .bo-gold  { color: var(--gold-mid); }
 .bo-gold-bright { color: var(--gold-bright); }
 
-h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold-bright); margin: 0; }
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--gold-bright);
+  margin: 0;
+}
 
 /* ---------- App shell ---------- */
 .bo-app {
@@ -62,8 +90,22 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   z-index: 1;
   min-height: 100vh;
   padding: 28px 22px 80px;
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
+  transition: filter 0.35s ease, opacity 0.35s ease;
+}
+
+.bo-app.stealth {
+  filter: brightness(0.45) saturate(0.55);
+}
+.bo-app.stealth .bo-card,
+.bo-app.stealth .bo-verdict,
+.bo-app.stealth .bo-controls .bo-glass-btn:not(.primary):not(.critical-pulse) {
+  opacity: 0.35;
+}
+.bo-app.stealth .bo-header h1 {
+  background: none;
+  -webkit-text-fill-color: var(--gold-deep);
 }
 
 .bo-header {
@@ -73,6 +115,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   border-bottom: 1px solid var(--obsidian-edge);
   padding-bottom: 18px;
   margin-bottom: 24px;
+  position: relative;
 }
 
 .bo-header .sigil {
@@ -84,8 +127,8 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
 }
 
 .bo-header h1 {
-  font-size: 36px;
-  line-height: 1.1;
+  font-size: 38px;
+  line-height: 1.05;
   background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-core) 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -100,40 +143,53 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   margin-top: 6px;
 }
 
-/* ---------- Health Battery ---------- */
-.bo-battery-wrap {
+/* Stealth toggle — top right neumorphic capsule */
+.bo-stealth-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background:
+    linear-gradient(160deg, rgba(255, 217, 102, 0.06), rgba(0, 0, 0, 0.6)),
+    rgba(10, 10, 13, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--gold-bright);
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 1.5px var(--neu-light),
+    inset -2px -2px 4px var(--neu-dark),
+    0 0 14px rgba(212, 175, 55, 0.18);
+  transition: all 0.25s ease;
+}
+.bo-stealth-toggle.on {
+  color: var(--signal-red);
+  border-color: rgba(255, 59, 59, 0.45);
+  box-shadow:
+    inset 1px 1px 1.5px rgba(255, 100, 100, 0.18),
+    inset -2px -2px 4px var(--neu-dark),
+    0 0 18px rgba(255, 59, 59, 0.5);
+}
+.bo-stealth-toggle:hover { transform: translateY(-1px); }
+
+/* ---------- Liquid Vial Battery ---------- */
+.bo-vial-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding: 28px 0 18px;
-}
-
-.bo-battery {
+  padding: 12px 0 18px;
   position: relative;
-  width: 220px;
-  height: 320px;
-  filter: drop-shadow(0 0 18px var(--gold-glow));
 }
-
-.bo-battery svg { width: 100%; height: 100%; display: block; }
-
-.bo-battery .fill-bar {
-  transition: height 0.6s ease;
-}
-
-.bo-battery .pulse-ring {
-  transform-origin: 50% 50%;
-  animation-name: bo-pulse;
-  animation-iteration-count: infinite;
-  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes bo-pulse {
-  0%   { transform: scale(0.94); opacity: 0.85; }
-  35%  { transform: scale(1.0);  opacity: 1;    }
-  60%  { transform: scale(0.97); opacity: 0.6;  }
-  100% { transform: scale(0.94); opacity: 0.85; }
+.bo-vial-wrap canvas {
+  display: block;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.7));
 }
 
 .bo-battery-readout {
@@ -141,15 +197,15 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   align-items: baseline;
   gap: 14px;
   font-family: var(--font-mono);
+  margin-top: -8px;
 }
-
 .bo-battery-readout .pct {
-  font-size: 42px;
+  font-size: 44px;
   font-weight: 500;
   color: var(--gold-bright);
   letter-spacing: 0.05em;
+  text-shadow: 0 0 18px rgba(255, 217, 102, 0.35);
 }
-
 .bo-battery-readout .bpm {
   font-size: 14px;
   color: #c2bca4;
@@ -163,40 +219,159 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--gold-mid);
+  text-align: center;
 }
 
-/* ---------- Signal cards ---------- */
+/* ---------- Neumorphic Glass Buttons ---------- */
+.bo-glass-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  padding: 13px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold-bright);
+  cursor: pointer;
+  font-weight: 600;
+  background:
+    linear-gradient(160deg, rgba(255, 217, 102, 0.08), rgba(0, 0, 0, 0.55)),
+    rgba(15, 15, 22, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    inset 1.5px 1.5px 2px var(--neu-light),
+    inset -2px -2px 5px var(--neu-dark),
+    0 0 12px rgba(212, 175, 55, 0.18);
+  transition: transform 0.18s ease, box-shadow 0.25s ease, opacity 0.25s ease, color 0.2s;
+}
+.bo-glass-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 1.5px 1.5px 2px var(--neu-light),
+    inset -2px -2px 5px var(--neu-dark),
+    0 0 22px rgba(212, 175, 55, 0.5);
+  color: #fff3c0;
+}
+.bo-glass-btn:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 2px 2px 6px var(--neu-dark),
+    inset -1px -1px 1.5px var(--neu-light);
+}
+.bo-glass-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -1px -1px 2px var(--neu-dark);
+}
+.bo-glass-btn.primary {
+  background:
+    linear-gradient(160deg, rgba(255, 217, 102, 0.25), rgba(138, 106, 22, 0.45)),
+    rgba(20, 16, 6, 0.6);
+  color: var(--obsidian-0);
+  border-color: rgba(255, 217, 102, 0.6);
+  font-weight: 800;
+}
+.bo-glass-btn.primary:hover { color: #1a0f00; }
+
+.bo-glass-btn.critical-pulse {
+  border-color: rgba(255, 59, 59, 0.55);
+  color: var(--signal-red);
+  animation: critical-glow 1.4s infinite;
+}
+@keyframes critical-glow {
+  0%, 100% { box-shadow: inset 1.5px 1.5px 2px var(--neu-light), inset -2px -2px 5px var(--neu-dark), 0 0 12px rgba(255,59,59,0.25); }
+  50%      { box-shadow: inset 1.5px 1.5px 2px var(--neu-light), inset -2px -2px 5px var(--neu-dark), 0 0 30px rgba(255,59,59,0.7); }
+}
+
+.bo-glass-mini {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background:
+    linear-gradient(160deg, rgba(255, 217, 102, 0.08), rgba(0, 0, 0, 0.45)),
+    rgba(15, 15, 22, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--gold-bright);
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow:
+    inset 1px 1px 1.5px var(--neu-light),
+    inset -1.5px -1.5px 3px var(--neu-dark),
+    0 0 8px rgba(212, 175, 55, 0.12);
+  transition: transform 0.18s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+.bo-glass-mini:hover { transform: translateY(-1px); box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -1.5px -1.5px 3px var(--neu-dark), 0 0 14px rgba(212, 175, 55, 0.35); }
+.bo-glass-mini:active { transform: translateY(1px); }
+.bo-glass-mini:disabled { opacity: 0.4; cursor: not-allowed; }
+.bo-glass-mini.ghost {
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  box-shadow: inset 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.bo-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.ledger-pill {
+  font-size: 11px !important;
+  letter-spacing: 0.25em;
+  align-self: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: rgba(10, 10, 13, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ---------- Signal cards (glass) ---------- */
 .bo-dashboard {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
   margin-top: 28px;
 }
-
-@media (min-width: 560px) {
+@media (min-width: 600px) {
   .bo-dashboard { grid-template-columns: 1fr 1fr; }
 }
 
 .bo-card {
-  background: linear-gradient(160deg, var(--obsidian-2) 0%, var(--obsidian-1) 100%);
-  border: 1px solid var(--obsidian-edge);
-  border-radius: 14px;
-  padding: 18px 18px 16px;
   position: relative;
+  border-radius: 18px;
+  padding: 18px 18px 18px;
+  background:
+    linear-gradient(160deg, rgba(35, 35, 48, 0.65) 0%, rgba(10, 10, 14, 0.85) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow:
+    inset 1px 1px 1.5px var(--neu-light),
+    inset -2px -2px 5px var(--neu-dark),
+    0 10px 24px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
-
 .bo-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 14px;
+  border-radius: 18px;
   padding: 1px;
-  background: linear-gradient(135deg, var(--gold-deep), transparent 40%, transparent 60%, var(--gold-deep));
+  background: linear-gradient(135deg, rgba(212,175,55,0.55), transparent 35%, transparent 65%, rgba(212,175,55,0.45));
   -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
-  opacity: 0.4;
+  opacity: 0.7;
   pointer-events: none;
 }
 
@@ -204,16 +379,14 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
-
 .bo-card .head .label {
   font-family: var(--font-serif);
-  font-size: 17px;
+  font-size: 18px;
   color: var(--gold-bright);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
-
 .bo-card .head .channel {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -224,12 +397,12 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
 
 .bo-card .value {
   font-family: var(--font-mono);
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 500;
-  color: #f0eadb;
-  letter-spacing: 0.04em;
+  color: #f5efd9;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(255, 217, 102, 0.18);
 }
-
 .bo-card .unit {
   font-size: 12px;
   color: #8a8475;
@@ -243,13 +416,14 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   border-radius: 2px;
   margin-top: 14px;
   overflow: hidden;
+  box-shadow: inset 1px 1px 2px var(--neu-dark);
 }
-
 .bo-card .bar > span {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright));
   transition: width 0.5s ease;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
 }
 
 .bo-card .footnote {
@@ -262,135 +436,79 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
 
 .bo-card.severity-elevated .bar > span { background: linear-gradient(90deg, var(--gold-mid), var(--signal-amber)); }
 .bo-card.severity-critical .bar > span { background: linear-gradient(90deg, var(--signal-amber), var(--signal-red)); }
-.bo-card.severity-critical { border-color: rgba(255, 59, 59, 0.35); }
+.bo-card.severity-critical { border-color: rgba(255, 59, 59, 0.45); }
 .bo-card.severity-critical .head .label { color: var(--signal-red); }
+.bo-card.severity-critical .value { text-shadow: 0 0 12px rgba(255, 59, 59, 0.3); }
 
-/* ---------- Slider (placeholder for PPG in Crack #2) ---------- */
-.bo-slider {
-  -webkit-appearance: none;
+/* ---------- PPG sparkline ---------- */
+.bo-spark {
   width: 100%;
-  margin-top: 14px;
-  height: 4px;
-  background: var(--obsidian-3);
-  border-radius: 2px;
-  outline: none;
-}
-.bo-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, var(--gold-bright), var(--gold-deep));
-  cursor: pointer;
-  box-shadow: 0 0 10px var(--gold-glow);
-}
-.bo-slider::-moz-range-thumb {
-  width: 18px; height: 18px; border-radius: 50%; border: none;
-  background: radial-gradient(circle at 30% 30%, var(--gold-bright), var(--gold-deep));
-  box-shadow: 0 0 10px var(--gold-glow);
+  height: 44px;
+  margin-top: 10px;
+  display: block;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.04), transparent), rgba(10, 10, 14, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
 }
 
-/* ---------- Triage banner ---------- */
-.bo-verdict {
-  margin-top: 28px;
-  padding: 20px 20px;
-  border-radius: 14px;
-  border: 1px solid var(--obsidian-edge);
-  background:
-    linear-gradient(160deg, rgba(212, 175, 55, 0.06), transparent 60%),
-    var(--obsidian-2);
+/* ---------- APG vascular-age row ---------- */
+.bo-apg-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: rgba(10, 10, 14, 0.55);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow: inset 1px 1px 1.5px var(--neu-light), inset -1.5px -1.5px 3px var(--neu-dark);
+}
+.bo-apg-cell {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 2px;
 }
-
-.bo-verdict .level {
+.bo-apg-cell .lbl {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #6b6555;
+}
+.bo-apg-cell .val {
   font-family: var(--font-serif);
-  font-size: 22px;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-}
-
-.bo-verdict .score {
-  font-family: var(--font-mono);
-  color: #c2bca4;
-  font-size: 12px;
-  letter-spacing: 0.3em;
-}
-
-.bo-verdict .directive {
-  font-family: var(--font-serif);
-  font-size: 17px;
-  line-height: 1.45;
-  color: #ece5cf;
-}
-
-.bo-verdict.level-critical, .bo-verdict.level-sovereign-override {
-  border-color: rgba(255, 59, 59, 0.45);
-  box-shadow: 0 0 24px rgba(255, 59, 59, 0.18);
-}
-.bo-verdict.level-critical .level,
-.bo-verdict.level-sovereign-override .level { color: var(--signal-red); }
-.bo-verdict.level-elevated .level { color: var(--signal-amber); }
-.bo-verdict.level-monitor  .level { color: var(--gold-mid); }
-.bo-verdict.level-stable   .level { color: var(--signal-jade); }
-
-/* ---------- Buttons ---------- */
-.bo-btn {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  padding: 12px 22px;
-  background: linear-gradient(180deg, var(--gold-mid), var(--gold-deep));
-  color: var(--obsidian-0);
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-  box-shadow: 0 0 14px var(--gold-glow);
-}
-.bo-btn:hover { transform: translateY(-1px); box-shadow: 0 0 22px var(--gold-glow); }
-.bo-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-.bo-btn.ghost {
-  background: transparent;
+  font-size: 18px;
   color: var(--gold-bright);
-  border: 1px solid var(--gold-deep);
-  box-shadow: none;
+  letter-spacing: 0.04em;
 }
 
-.bo-controls {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 22px;
+/* ---------- Spectrogram ---------- */
+.bo-spectrogram-wrap {
+  margin-top: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.55);
+  position: relative;
 }
-
-/* ---------- Flags ---------- */
-.bo-flags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+.bo-spectrogram {
+  display: block;
+  width: 100%;
 }
-.bo-flag {
+.bo-spectrogram-axes {
+  display: flex;
+  justify-content: space-between;
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.15em;
+  font-size: 8px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  color: var(--gold-bright);
+  color: #6b6555;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.55);
 }
-.bo-flag.danger {
-  background: rgba(255, 59, 59, 0.12);
-  border-color: rgba(255, 59, 59, 0.4);
-  color: var(--signal-red);
-}
+.bo-spectrogram-axes .hz-band { color: #d68bbd; }
 
 /* ---------- Sensor mini controls ---------- */
 .bo-mini-controls {
@@ -398,48 +516,12 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   gap: 8px;
   margin-top: 12px;
 }
-.bo-btn-mini {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  background: linear-gradient(180deg, var(--gold-mid), var(--gold-deep));
-  color: var(--obsidian-0);
-  font-weight: 700;
-  box-shadow: 0 0 8px var(--gold-glow);
-  transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-}
-.bo-btn-mini:hover { transform: translateY(-1px); box-shadow: 0 0 14px var(--gold-glow); }
-.bo-btn-mini:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
-.bo-btn-mini.ghost {
-  background: transparent;
-  color: var(--gold-bright);
-  border: 1px solid var(--gold-deep);
-  box-shadow: none;
-}
 
-/* ---------- PPG sparkline ---------- */
-.bo-spark {
-  width: 100%;
-  height: 38px;
-  margin-top: 10px;
-  display: block;
-  background:
-    linear-gradient(180deg, rgba(212, 175, 55, 0.05), transparent),
-    var(--obsidian-1);
-  border-radius: 6px;
-  border: 1px solid var(--obsidian-edge);
-}
-
-/* ---------- EMF Synthetic Interference badge ---------- */
-.bo-emf-badge {
+/* ---------- EMF Synthetic Interference badge (now floats above vial) ---------- */
+.bo-emf-badge.floating {
   position: absolute;
-  top: -6px;
-  right: -42px;
+  top: 14px;
+  right: 6px;
   background: rgba(255, 59, 59, 0.12);
   border: 1px solid rgba(255, 59, 59, 0.55);
   color: var(--signal-red);
@@ -447,15 +529,17 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 0 18px rgba(255, 59, 59, 0.4);
+  box-shadow: 0 0 18px rgba(255, 59, 59, 0.45);
   animation: bo-emf-flash 1.1s infinite;
   white-space: nowrap;
   z-index: 5;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .bo-emf-badge .dot {
   width: 8px;
@@ -476,12 +560,73 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   50% { opacity: 0.55; }
 }
 
-@media (max-width: 600px) {
-  .bo-emf-badge {
-    right: 50%;
-    top: -8px;
-    transform: translateX(50%);
-  }
+/* ---------- Verdict ---------- */
+.bo-verdict {
+  margin-top: 28px;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  background:
+    linear-gradient(160deg, rgba(212, 175, 55, 0.08), rgba(0, 0, 0, 0.6)),
+    rgba(15, 15, 22, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    inset 1px 1px 1.5px var(--neu-light),
+    inset -2px -2px 5px var(--neu-dark),
+    0 10px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bo-verdict .level {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+.bo-verdict .score {
+  font-family: var(--font-mono);
+  color: #c2bca4;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+}
+.bo-verdict .directive {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.45;
+  color: #ece5cf;
+}
+.bo-verdict.level-critical, .bo-verdict.level-sovereign-override {
+  border-color: rgba(255, 59, 59, 0.45);
+  box-shadow:
+    inset 1px 1px 1.5px var(--neu-light),
+    inset -2px -2px 5px var(--neu-dark),
+    0 10px 28px rgba(255, 59, 59, 0.25);
+}
+.bo-verdict.level-critical .level,
+.bo-verdict.level-sovereign-override .level { color: var(--signal-red); }
+.bo-verdict.level-elevated .level { color: var(--signal-amber); }
+.bo-verdict.level-monitor  .level { color: var(--gold-mid); }
+.bo-verdict.level-stable   .level { color: var(--signal-jade); }
+
+/* ---------- Flags ---------- */
+.bo-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.bo-flag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold-bright);
+}
+.bo-flag.danger {
+  background: rgba(255, 59, 59, 0.12);
+  border-color: rgba(255, 59, 59, 0.45);
+  color: var(--signal-red);
 }
 
 /* ---------- Footer ---------- */
@@ -495,4 +640,12 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-align: center;
+}
+
+/* ---------- Mobile compact ---------- */
+@media (max-width: 600px) {
+  .bo-app { padding: 22px 14px 60px; }
+  .bo-header h1 { font-size: 30px; }
+  .bo-stealth-toggle { position: relative; align-self: flex-end; margin-top: 6px; }
+  .bo-emf-badge.floating { right: 50%; top: 8px; transform: translateX(50%); }
 }
