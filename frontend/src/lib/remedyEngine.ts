@@ -13,8 +13,9 @@
  */
 import type { ScleraReading, TongueReading } from "@/lib/imageAnalysis";
 import type { TriageVerdict } from "@/SovereignLogic";
+import type { SieveContext } from "@/lib/banterSieve";
 
-export type Profile = "sovereign" | "cruise" | "beauty";
+export type Profile = "sovereign" | "cruise" | "beauty" | "pet" | "baby" | "guardian";
 
 export interface RitualScans {
   sclera: ScleraReading | null;
@@ -68,7 +69,7 @@ function detectSymptoms(banter: string): string[] {
   return found;
 }
 
-export function generateRemedy(scans: RitualScans, banterText: string): RemedyCard {
+export function generateRemedy(scans: RitualScans, banterText: string, sieve?: SieveContext): RemedyCard {
   const symptoms = detectSymptoms(banterText);
   const flags: string[] = [];
   const actions: RemedyCard["actions"] = [];
@@ -185,6 +186,37 @@ export function generateRemedy(scans: RitualScans, banterText: string): RemedyCa
     });
   }
 
+  // ---- Apply the Sieve (pre-filter context) ----
+  if (sieve) {
+    // Filter OUT actions matching sieve.filterOut substrings
+    const filtered = actions.filter((a) => {
+      const text = a.text.toLowerCase();
+      return !sieve.filterOut.some((needle) => text.includes(needle.toLowerCase()));
+    });
+    actions.length = 0;
+    actions.push(...filtered);
+
+    // PROMOTE / DEMOTE band
+    if (sieve.demoteUrgency) {
+      if (band === "urgent") band = "watch";
+      else if (band === "watch") band = "stable";
+      const explainer = sieve.explanations[0] || "Context softens this reading.";
+      topConcern = `Context-softened — ${topConcern} [${explainer}]`;
+    }
+    if (sieve.promoteUrgency) {
+      if (band === "stable") band = "watch";
+      else if (band === "watch") band = "urgent";
+      topConcern = `Context-amplified — ${topConcern}`;
+    }
+    // Gate: no doctor mention unless sieve approved
+    if (!sieve.doctorAdvisable) {
+      flags.push("sieve:no-clinical-flag");
+    }
+    if (!sieve.supplementAdvisable) {
+      flags.push("sieve:supplement-gate");
+    }
+  }
+
   // ---- Dedup + trim to 3 ----
   const seen = new Set<string>();
   const top3 = actions.filter((a) => {
@@ -244,6 +276,22 @@ function bantersByProfile(profile: Profile, band: RemedyCard["band"]): string {
       urgent: "Pause, love. The skin is telling us something — let's listen before we layer.",
       watch:  "A whisper from the dermis. Hydrate, breathe, we adjust the ritual tonight.",
       stable: "You're luminous today. Maintain the cadence — sleep, water, sunlight.",
+    },
+    // --- Caregiver tones: supportive, clear, never alarmist ---
+    pet: {
+      urgent: "Caregiver — your companion's signals are loud. Stay calm. Call the vet's line and describe what you see.",
+      watch:  "A small change in the soundscape. Offer water, check posture, sit with them for 10 minutes.",
+      stable: "All sounds gentle. They're settled — you can be settled too.",
+    },
+    baby: {
+      urgent: "Caregiver — the rhythm has shifted. Move close, check warmth and posture gently. If the change persists, call your line of help.",
+      watch:  "A small irregularity, often nothing. Stay near, breathe slow yourself — they'll often follow.",
+      stable: "Soft, even rhythm. The room is quiet. You're doing well.",
+    },
+    guardian: {
+      urgent: "Caregiver — the vascular pattern needs a witness. The PDF is ready. Reach your trusted contact when you're ready.",
+      watch:  "Numbers are drifting a little. Sit, take a sip of water with them, re-scan in 15 minutes.",
+      stable: "Pulse is even, asymmetry is low. A good day. Note it for the ledger.",
     },
   };
   return lib[profile][band];

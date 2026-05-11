@@ -18,15 +18,23 @@ export interface MicState {
   permissionError: string | null;
   sampleRate: number;
   rms: number;
-  subSonicRatio: number;          // 0..1 — share of energy in <50Hz band
+  subSonicRatio: number;          // 0..1 — share of energy in <50Hz band (noise-corrected)
   lectinSignature: number;        // 0..1 — sub-sonic ratio × event-rate normalised
   acoustic: StomachAcousticSignal | null;
   /** live AnalyserNode for the Spectrogram visualiser */
   analyser: AnalyserNode | null;
+  /** Calibration phase status (3 s silent baseline) */
+  calibration: {
+    phase: "idle" | "calibrating" | "ready";
+    elapsedSec: number;
+    noiseFloorRms: number;
+    noiseFloorSubSonic: number;
+  };
 }
 
 const ANALYSIS_INTERVAL_MS = 1800;
 const FFT_SIZE = 2048;
+const NOISE_FLOOR_SEC = 3;
 
 export function useStomachMic() {
   const [state, setState] = useState<MicState>({
@@ -38,12 +46,25 @@ export function useStomachMic() {
     lectinSignature: 0,
     acoustic: null,
     analyser: null,
+    calibration: { phase: "idle", elapsedSec: 0, noiseFloorRms: 0, noiseFloorSubSonic: 0 },
   });
 
   const ctxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
+  const calibrationRef = useRef<{
+    phase: "idle" | "calibrating" | "ready";
+    startTs: number;
+    rmsSamples: number[];
+    subSamples: number[];
+    noiseFloorRms: number;
+    noiseFloorSubSonic: number;
+  }>({
+    phase: "idle", startTs: 0,
+    rmsSamples: [], subSamples: [],
+    noiseFloorRms: 0, noiseFloorSubSonic: 0,
+  });
 
   const stop = useCallback(() => {
     if (timerRef.current) {
@@ -59,7 +80,17 @@ export function useStomachMic() {
       ctxRef.current = null;
     }
     analyserRef.current = null;
-    setState((s) => ({ ...s, active: false, analyser: null }));
+    calibrationRef.current = {
+      phase: "idle", startTs: 0,
+      rmsSamples: [], subSamples: [],
+      noiseFloorRms: 0, noiseFloorSubSonic: 0,
+    };
+    setState((s) => ({
+      ...s,
+      active: false,
+      analyser: null,
+      calibration: { phase: "idle", elapsedSec: 0, noiseFloorRms: 0, noiseFloorSubSonic: 0 },
+    }));
   }, []);
 
   const start = useCallback(async () => {
@@ -85,6 +116,17 @@ export function useStomachMic() {
       analyserRef.current = analyser;
 
       setState((s) => ({ ...s, active: true, sampleRate: ctx.sampleRate, analyser }));
+
+      // Enter calibration phase
+      calibrationRef.current = {
+        phase: "calibrating", startTs: Date.now(),
+        rmsSamples: [], subSamples: [],
+        noiseFloorRms: 0, noiseFloorSubSonic: 0,
+      };
+      setState((s) => ({
+        ...s,
+        calibration: { phase: "calibrating", elapsedSec: 0, noiseFloorRms: 0, noiseFloorSubSonic: 0 },
+      }));
 
       timerRef.current = window.setInterval(() => {
         const an = analyserRef.current;
@@ -116,12 +158,43 @@ export function useStomachMic() {
           totalEnergy += amp;
           if (hz < 50) subSonicEnergy += amp;
         }
-        const subSonicRatio = totalEnergy > 0 ? subSonicEnergy / totalEnergy : 0;
+        const subSonicRaw = totalEnergy > 0 ? subSonicEnergy / totalEnergy : 0;
 
         // RMS (time domain)
         let sq = 0;
         for (let i = 0; i < td.length; i++) sq += td[i] * td[i];
         const rms = Math.sqrt(sq / td.length);
+
+        // ----- Calibration phase: 3 s silent check -----
+        const cal = calibrationRef.current;
+        if (cal.phase === "calibrating") {
+          cal.rmsSamples.push(rms);
+          cal.subSamples.push(subSonicRaw);
+          const elapsed = (Date.now() - cal.startTs) / 1000;
+          if (elapsed >= NOISE_FLOOR_SEC) {
+            cal.noiseFloorRms = cal.rmsSamples.reduce((a, b) => a + b, 0) / Math.max(1, cal.rmsSamples.length);
+            cal.noiseFloorSubSonic = cal.subSamples.reduce((a, b) => a + b, 0) / Math.max(1, cal.subSamples.length);
+            cal.phase = "ready";
+            setState((s) => ({
+              ...s,
+              calibration: {
+                phase: "ready",
+                elapsedSec: round(elapsed, 1),
+                noiseFloorRms: round(cal.noiseFloorRms, 4),
+                noiseFloorSubSonic: round(cal.noiseFloorSubSonic, 3),
+              },
+            }));
+          } else {
+            setState((s) => ({
+              ...s,
+              calibration: { ...s.calibration, phase: "calibrating", elapsedSec: round(elapsed, 1) },
+            }));
+          }
+          return;
+        }
+
+        // Live: subtract ambient floor
+        const subSonicRatio = Math.max(0, Math.min(1, subSonicRaw - cal.noiseFloorSubSonic));
 
         // Lectin signature: low-freq dominant + persistent rumble
         const eventNorm = Math.min(1, acoustic.bpm / 25);

@@ -23,6 +23,23 @@ const DigestionScene: React.FC<Props> = ({ accent, onClose }) => {
 
           <Spectrogram analyser={mic.state.analyser} />
 
+          {mic.state.active && mic.state.calibration.phase === "calibrating" && (
+            <div className="bo-noise-floor calibrating" data-testid="digestion-noise-floor">
+              <span className="lbl">SILENT CHECK · NOISE FLOOR</span>
+              <div className="bar"><span style={{ width: `${Math.min(100, (mic.state.calibration.elapsedSec / 3) * 100)}%` }} /></div>
+              <span className="hint">Stay quiet for 3 seconds while we measure the room.</span>
+            </div>
+          )}
+          {mic.state.active && mic.state.calibration.phase === "ready" && (
+            <div className="bo-noise-floor ready" data-testid="digestion-noise-floor-ready">
+              <span className="lbl">NOISE FLOOR LOCKED</span>
+              <span className="vals">
+                rms <b>{mic.state.calibration.noiseFloorRms.toFixed(4)}</b> ·
+                sub-50Hz <b>{(mic.state.calibration.noiseFloorSubSonic * 100).toFixed(0)}%</b>
+              </span>
+            </div>
+          )}
+
           <div className="bo-blood-stats" data-testid="digestion-stats">
             <div><span>State</span><b>{mic.state.acoustic?.state || "idle"}</b><em></em></div>
             <div><span>Events</span><b>{(mic.state.acoustic?.bpm ?? 0).toFixed(1)}</b><em>/min</em></div>

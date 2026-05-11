@@ -1,7 +1,7 @@
 import React from "react";
 
-export type TileKey = "medical" | "digestion" | "emergency" | "stealth" | "cruise" | "beauty";
-export type Profile = "sovereign" | "cruise" | "beauty";
+export type TileKey = "medical" | "digestion" | "emergency" | "stealth" | "cruise" | "beauty" | "pet" | "baby" | "guardian";
+export type Profile = "sovereign" | "cruise" | "beauty" | "pet" | "baby" | "guardian";
 
 interface TileMeta {
   key: TileKey;
@@ -90,6 +90,49 @@ export const TILES: TileMeta[] = [
       </svg>
     ),
   },
+  {
+    key: "pet",
+    label: "Pet",
+    sub: "Acoustic · Bloat · Distress",
+    accent: "#c8704a",
+    showIn: ["pet"],
+    glyph: (
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M5 13c0-3 2-5 4-5s3 1 3 3 1 3 3 3 4 2 4 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <circle cx="8" cy="7" r="1.2" fill="currentColor"/>
+        <circle cx="11" cy="5" r="1.2" fill="currentColor"/>
+        <circle cx="15" cy="6" r="1.2" fill="currentColor"/>
+        <circle cx="18" cy="9" r="1.2" fill="currentColor"/>
+      </svg>
+    ),
+  },
+  {
+    key: "baby",
+    label: "Baby",
+    sub: "Crib · Respiration · Absolute Stealth",
+    accent: "#b9a4e6",
+    showIn: ["baby"],
+    glyph: (
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="9" r="4" stroke="currentColor" strokeWidth="1.4"/>
+        <path d="M5 21c1.5-4 5-6 7-6s5.5 2 7 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M9 8.5c0.6 0.5 1.4 0.5 2 0M13 8.5c0.6 0.5 1.4 0.5 2 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    key: "guardian",
+    label: "Guardian",
+    sub: "Trusted Link · Auto-PDF",
+    accent: "#7a96c0",
+    showIn: ["guardian"],
+    glyph: (
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 3l8 4v6c0 4.5-3.5 7-8 8-4.5-1-8-3.5-8-8V7l8-4z" stroke="currentColor" strokeWidth="1.4"/>
+        <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
 ];
 
 interface DashboardProps {
@@ -98,14 +141,19 @@ interface DashboardProps {
   setProfile: (p: Profile) => void;
   health?: { charge: number; bpm: number; level: string };
   stealthEngaged?: boolean;
+  autoStealthActive?: boolean;
+  autoStealthTicks?: number;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onOpen, profile, setProfile, health, stealthEngaged }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onOpen, profile, setProfile, health, stealthEngaged, autoStealthActive, autoStealthTicks }) => {
   const visible = TILES.filter((t) => t.showIn.includes(profile));
   const profileLabel: Record<Profile, string> = {
     sovereign: "Sovereign",
     cruise: "Bio Cruise",
     beauty: "Bio Beauty",
+    pet: "Bio Pet",
+    baby: "Bio Baby",
+    guardian: "Guardian",
   };
 
   return (
@@ -120,19 +168,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpen, profile, setProfile, heal
         </span>
 
         <div className="bo-profile-switcher" data-testid="profile-switcher">
-          {(["sovereign","cruise","beauty"] as Profile[]).map((p) => (
+          {(["sovereign","cruise","beauty","pet","baby","guardian"] as Profile[]).map((p) => (
             <button
               key={p}
               className={`chip chip-${p} ${profile === p ? "on" : ""}`}
               onClick={() => setProfile(p)}
               data-testid={`profile-${p}`}
             >
-              {p === "sovereign" ? "Sovereign" : p === "cruise" ? "Cruise" : "Beauty"}
+              {profileLabel[p]}
             </button>
           ))}
         </div>
 
         <span className="bo-swipe-hint">↓ swipe down · sovereign vial</span>
+
+        <div className="bo-sentry-pulse" data-testid="sentry-pulse" data-active={autoStealthActive ? "true" : "false"}>
+          <span className="ring" />
+          <span className="dot" />
+          <span className="lbl">
+            {autoStealthActive
+              ? `AUTO-STEALTH SENTRY · ENGAGED`
+              : `AUTO-STEALTH SENTRY · listening (${Math.min(3, autoStealthTicks || 0)}/3)`}
+          </span>
+        </div>
       </header>
 
       <div className="bo-bento" data-testid="bento">

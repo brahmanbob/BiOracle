@@ -32,15 +32,17 @@ const StealthScene: React.FC<Props> = ({ accent, onClose, intent, autoStealth })
     <div className={`bo-immersion ${stealthFired ? "stealth-engaged" : ""}`} style={{ ["--accent" as any]: accent }} data-testid="stealth-immersion">
       <header className="bo-imm-header">
         <button className="bo-back" onClick={() => { mag.stop(); onClose(); }} data-testid="btn-back-dash">← Dashboard</button>
-        <span className="bo-imm-title">STEALTH · CONTEXTUAL + AUTO</span>
+        <span className="bo-imm-title">STEALTH · MAGNETIC FIELD MITIGATION</span>
       </header>
 
       <div className="bo-imm-body">
         <div className="bo-scene-card">
-          <h2 className="bo-step-title">EMF × Intent × Stillness</h2>
+          <h2 className="bo-step-title">Magnetic Field × Intent × Stillness</h2>
           <p className="bo-step-instructions">
-            <em>Reactive Stealth</em> fires on µT spike while focused.&nbsp;
-            <em>Auto-Stealth</em> fires <em>proactively</em> when the phone is static (mag variance &lt; 0.05µT) and screen is on — protection during reading mode.
+            <strong>Disclosure:</strong> this view is a <em>magnetic-field mitigation</em> tool — it reads the
+            phone's magnetometer (µT) to time on-device app responses. <strong>It is not an RF / radio-frequency meter</strong>
+            and does not measure cellular, Wi-Fi or Bluetooth emissions. Mitigation is limited to wake-lock, request abort,
+            and a user-confirmed Airplane-Mode prompt.
           </p>
 
           <div className="bo-bridge-status" data-testid="bridge-status">
@@ -49,7 +51,7 @@ const StealthScene: React.FC<Props> = ({ accent, onClose, intent, autoStealth })
             <div className="row"><span>Native plugin</span><b>{bridge.hasRadioSuppressPlugin ? "ready" : bridge.hasCapacitor ? "capacitor · no plugin" : "—"}</b></div>
             <div className="row"><span>Reactive</span><b className={intent.stealthEngaged ? "on" : ""}>{intent.stealthEngaged ? "ENGAGED" : "idle"}</b></div>
             <div className="row"><span>Auto</span><b className={autoStealth.active ? "on" : ""}>{autoStealth.active ? `ENGAGED ${Math.round((Date.now() - autoStealth.engagedSince)/1000)}s` : `${autoStealth.staticTicks}/3 ticks`}</b></div>
-            <div className="row"><span>Suppression</span><b className={bridge.active ? "on" : ""}>{bridge.active ? "RADIO QUIET" : "idle"}</b></div>
+            <div className="row"><span>Mitigation</span><b className={bridge.active ? "on" : ""}>{bridge.active ? "ON-DEVICE QUIET" : "idle"}</b></div>
           </div>
 
           <div className="bo-stealth-gauges" data-testid="stealth-gauges">
@@ -63,22 +65,22 @@ const StealthScene: React.FC<Props> = ({ accent, onClose, intent, autoStealth })
 
           {intent.stealthEngaged && (
             <div className="bo-stealth-alert" data-testid="stealth-alert">
-              <span className="title">⚠︎ REACTIVE STEALTH</span>
-              <p>EMF spike ({mag.state.microtesla.toFixed(1)}µT) <em>while you are focused</em> (intent {intent.intent.toFixed(2)}).</p>
+              <span className="title">⚠︎ REACTIVE MITIGATION</span>
+              <p>Magnetic-field anomaly ({mag.state.microtesla.toFixed(1)} µT) <em>while you are focused</em> (intent {intent.intent.toFixed(2)}).</p>
             </div>
           )}
 
           {autoStealth.active && (
             <div className="bo-auto-alert" data-testid="auto-alert">
-              <span className="title">◉ AUTO-STEALTH ENGAGED</span>
-              <p>Static phone · screen on · radio chatter being suppressed.</p>
+              <span className="title">◉ AUTO-MITIGATION ENGAGED</span>
+              <p>Phone static · screen on · on-device chatter being held to a minimum.</p>
               {autoStealth.lastResult && (
                 <ul className="bridge-actions">
                   <li>Wake-lock: <b>{autoStealth.lastResult.ranWakeLock ? "held" : "n/a"}</b></li>
-                  <li>Pings aborted: <b>{autoStealth.lastResult.abortedRequests}</b></li>
+                  <li>App pings aborted: <b>{autoStealth.lastResult.abortedRequests}</b></li>
                   <li>Native plugin: <b>{autoStealth.lastResult.pluginInvoked ? "invoked" : "—"}</b></li>
                   {autoStealth.lastResult.airplaneModePromptShown && (
-                    <li className="prompt">Flip Airplane Mode for total RF kill (OS-gated, app cannot toggle directly).</li>
+                    <li className="prompt">Flip Airplane Mode for a full radio-off state (only the OS can toggle the modem).</li>
                   )}
                 </ul>
               )}
@@ -86,9 +88,15 @@ const StealthScene: React.FC<Props> = ({ accent, onClose, intent, autoStealth })
           )}
 
           {!mag.state.available && (
-            <p className="bo-error">⚠︎ Magnetometer unavailable in this view — open standalone in S21 Chrome.</p>
+            <p className="bo-error">⚠︎ Magnetometer unavailable in this view — open in S21 Chrome over HTTPS.</p>
           )}
           {mag.state.permissionError && <p className="bo-error">⚠︎ {mag.state.permissionError}</p>}
+
+          <p className="bo-compliance-foot" data-testid="compliance-foot">
+            Compliance: this tool is a <strong>Magnetic Field Mitigation</strong> aid for personal use.
+            It does <strong>not</strong> measure radio-frequency emissions and is not an RF survey instrument.
+            Mitigation actions are limited to on-device app behaviour (wake-lock, fetch abort, user-confirmed Airplane prompt).
+          </p>
 
           <div className="bo-step-controls">
             {!mag.state.active ? (

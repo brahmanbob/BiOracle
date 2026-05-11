@@ -3,6 +3,8 @@ import RetinolScan from "@/wizard/RetinolScan";
 import TongueScan from "@/wizard/TongueScan";
 import BloodScan from "@/wizard/BloodScan";
 import BanterCompute from "@/wizard/BanterCompute";
+import LightCalibrationGate from "@/components/LightCalibrationGate";
+import type { LightCalibration } from "@/lib/lightCalibration";
 import type { ScleraReading, TongueReading } from "@/lib/imageAnalysis";
 import type { RemedyCard } from "@/lib/remedyEngine";
 
@@ -14,7 +16,7 @@ interface Props {
   syntheticInterference: boolean;
   haptic?: () => void;
   pdfPrint?: (payload: any) => Promise<void> | void;
-  profile?: "sovereign" | "cruise" | "beauty";
+  profile?: "sovereign" | "cruise" | "beauty" | "pet" | "baby" | "guardian";
 }
 
 type Step = "retinol" | "tongue" | "blood" | "banter";
@@ -22,6 +24,7 @@ type Step = "retinol" | "tongue" | "blood" | "banter";
 interface BloodPayload {
   heartRate: number; hrv: number; asymmetry: number; amplitude: number;
   vascularAge: number; agingIndex: number;
+  bpSystolic?: number; bpDiastolic?: number; spo2?: number; signalQuality?: number;
 }
 
 const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfMicrotesla, syntheticInterference, haptic, pdfPrint, profile }) => {
@@ -29,6 +32,8 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
   const [sclera, setSclera] = useState<ScleraReading | null>(null);
   const [tongue, setTongue] = useState<TongueReading | null>(null);
   const [blood, setBlood] = useState<BloodPayload | undefined>(undefined);
+  const [lightCal, setLightCal] = useState<LightCalibration | null>(null);
+  const [calibrated, setCalibrated] = useState<boolean>(false);
   const [morning, setMorning] = useState<boolean>(() => {
     // honor ?morning=1 URL shortcut from the PWA manifest shortcut
     try { return new URLSearchParams(window.location.search).get("morning") === "1"; } catch { return false; }
@@ -68,7 +73,22 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
       </div>
 
       <div className="bo-imm-body">
-        {step === "retinol" && (
+        {(step === "retinol" || step === "tongue") && !calibrated && (
+          <LightCalibrationGate
+            facing="environment"
+            required
+            onCalibrated={setLightCal}
+            onAccept={() => setCalibrated(true)}
+            testIdPrefix="medical-lightcal"
+          />
+        )}
+        {calibrated && lightCal && !lightCal.scanReady && (step === "retinol" || step === "tongue") && (
+          <p className="bo-cal-banner" data-testid="medical-cal-banner">
+            ⚠ Scanning under {lightCal.band} (~{lightCal.kelvin}K). Colour-shift readings marked as <em>provisional</em> in this Ledger.
+          </p>
+        )}
+
+        {step === "retinol" && calibrated && (
           <RetinolScan
             accent={accent}
             lighting={lighting}
@@ -76,7 +96,7 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
             onSkip={() => setStep("tongue")}
           />
         )}
-        {step === "tongue" && (
+        {step === "tongue" && calibrated && (
           <TongueScan
             accent={accent}
             lighting={lighting}

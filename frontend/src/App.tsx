@@ -8,6 +8,9 @@ import StealthScene from "@/scenes/StealthScene";
 import LiquidBatteryFullscreen from "@/scenes/LiquidBatteryFullscreen";
 import CruiseScene from "@/scenes/CruiseScene";
 import BeautyScene from "@/scenes/BeautyScene";
+import PetScene from "@/scenes/PetScene";
+import BabyScene from "@/scenes/BabyScene";
+import GuardianScene from "@/scenes/GuardianScene";
 import { useMagnetometer } from "@/hardware/useMagnetometer";
 import { useIntent } from "@/hardware/useIntent";
 import { useHaptics } from "@/hardware/useHaptics";
@@ -23,6 +26,9 @@ const ACCENTS: Record<TileKey, string> = {
   stealth:   "#cfcfd9",
   cruise:    "#c0ff00",
   beauty:    "#ff9bb3",
+  pet:       "#c8704a",
+  baby:      "#b9a4e6",
+  guardian:  "#7a96c0",
 };
 
 const PROFILE_KEY = "bo.profile.v14";
@@ -31,7 +37,7 @@ function App() {
   const [scene, setScene] = useState<Scene>("dashboard");
   const [profile, setProfileState] = useState<Profile>(() => {
     const stored = (typeof localStorage !== "undefined" && localStorage.getItem(PROFILE_KEY)) as Profile | null;
-    return stored === "cruise" || stored === "beauty" || stored === "sovereign" ? stored : "sovereign";
+    return stored === "cruise" || stored === "beauty" || stored === "sovereign" || stored === "pet" || stored === "baby" || stored === "guardian" ? stored : "sovereign";
   });
 
   const setProfile = (p: Profile) => {
@@ -100,7 +106,7 @@ function App() {
       data-auto-stealth={autoStealth.active ? "true" : "false"}
       data-testid="bioracle-root"
     >
-      {/* Auto-Stealth Ghost Silver ripple — proactive protection overlay */}
+      {/* Auto-Stealth Ghost Silver ripple — proactive magnetic-field mitigation overlay */}
       {autoStealth.active && (
         <div className="bo-ghost-ripple" data-testid="ghost-ripple" aria-hidden>
           <span className="r r1" />
@@ -109,16 +115,16 @@ function App() {
           <span className="r r4" />
           <span className="ghost-pill">
             <span className="dot" />
-            AUTO-STEALTH · {Math.round((Date.now() - autoStealth.engagedSince) / 1000)}s · {autoStealth.runtime}
+            AUTO-MITIGATION · {Math.round((Date.now() - autoStealth.engagedSince) / 1000)}s · {autoStealth.runtime}
           </span>
         </div>
       )}
 
-      {/* Reactive Universal Stealth — fires on EMF spike + intent (V13 behaviour) */}
+      {/* Reactive contextual mitigation — fires on magnetic-field anomaly + focused intent */}
       {intent.stealthEngaged && (
         <div className="bo-universal-stealth" data-testid="universal-stealth-banner">
           <span className="dot" />
-          <span className="lbl">UNIVERSAL STEALTH · {mag.state.microtesla.toFixed(1)} µT · intent {intent.intent.toFixed(2)}</span>
+          <span className="lbl">REACTIVE MITIGATION · {mag.state.microtesla.toFixed(1)} µT · intent {intent.intent.toFixed(2)}</span>
         </div>
       )}
 
@@ -129,6 +135,8 @@ function App() {
           setProfile={setProfile}
           health={dashboardChip}
           stealthEngaged={intent.stealthEngaged}
+          autoStealthActive={autoStealth.active}
+          autoStealthTicks={autoStealth.staticTicks}
         />
       )}
 
@@ -167,6 +175,18 @@ function App() {
 
       {scene === "beauty" && (
         <BeautyScene accent={ACCENTS.beauty} onClose={back} />
+      )}
+
+      {scene === "pet" && (
+        <PetScene accent={ACCENTS.pet} onClose={back} />
+      )}
+
+      {scene === "baby" && (
+        <BabyScene accent={ACCENTS.baby} onClose={back} motionVariance={intent.motionVariance} />
+      )}
+
+      {scene === "guardian" && (
+        <GuardianScene accent={ACCENTS.guardian} onClose={back} />
       )}
 
       {scene === "vial" && (

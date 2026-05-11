@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { analyseSkin, type SkinReading } from "@/lib/skinAnalysis";
+import LightCalibrationGate from "@/components/LightCalibrationGate";
+import type { LightCalibration } from "@/lib/lightCalibration";
 
 interface Props {
   accent: string;
@@ -14,6 +16,8 @@ const BeautyScene: React.FC<Props> = ({ accent, onClose }) => {
   const [torch, setTorch] = useState(false);
   const [reading, setReading] = useState<SkinReading | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [lightCal, setLightCal] = useState<LightCalibration | null>(null);
+  const [calibrated, setCalibrated] = useState(false);
 
   useEffect(() => () => {
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
@@ -115,7 +119,9 @@ const BeautyScene: React.FC<Props> = ({ accent, onClose }) => {
           )}
 
           <div className="bo-step-controls">
-            {!active ? (
+            {!calibrated ? (
+              <span className="bo-step-hint">Run light calibration above to unlock the scan.</span>
+            ) : !active ? (
               <button className="bo-glass-btn primary" onClick={start} data-testid="btn-beauty-start">Open Lens + Flash</button>
             ) : !reading ? (
               <button className="bo-glass-btn primary" onClick={capture} data-testid="btn-beauty-capture">Capture</button>

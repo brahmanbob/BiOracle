@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { generateRemedy, type RemedyCard, type RitualScans } from "@/lib/remedyEngine";
 import { emergencyTriage, fingerprintToABO } from "@/SovereignLogic";
+import BanterSieve from "@/wizard/BanterSieve";
+import type { SieveContext } from "@/lib/banterSieve";
 
 interface Props {
   sclera: RitualScans["sclera"];
@@ -8,6 +10,7 @@ interface Props {
   bloodPayload?: {
     heartRate: number; hrv: number; asymmetry: number; amplitude: number;
     vascularAge: number; agingIndex: number;
+    bpSystolic?: number; bpDiastolic?: number; spo2?: number; signalQuality?: number;
   };
   lectinSignature: number;
   emfMicrotesla: number;
@@ -15,7 +18,7 @@ interface Props {
   onPdf?: (remedy: RemedyCard) => Promise<void> | void;
   onClose: () => void;
   accent: string;
-  profile?: "sovereign" | "cruise" | "beauty";
+  profile?: "sovereign" | "cruise" | "beauty" | "pet" | "baby" | "guardian";
 }
 
 const DEFAULT_BLOOD = fingerprintToABO({
@@ -26,8 +29,10 @@ const BanterCompute: React.FC<Props> = ({
   sclera, tongue, bloodPayload, lectinSignature, emfMicrotesla, syntheticInterference, onPdf, onClose, accent, profile,
 }) => {
   const [banterText, setBanterText] = useState("");
+  const [phase, setPhase] = useState<"sieve" | "compute">("sieve");
+  const [sieve, setSieve] = useState<SieveContext | null>(null);
   const [history, setHistory] = useState<Array<{ role: "user" | "oracle"; text: string }>>([
-    { role: "oracle", text: "I have your scans. Speak — what does the body know that the sensors did not?" },
+    { role: "oracle", text: "I have your scans. Before I read them out, let me sift through context — context filters false alarms better than any algorithm." },
   ]);
   const [remedy, setRemedy] = useState<RemedyCard | null>(null);
 
@@ -51,7 +56,7 @@ const BanterCompute: React.FC<Props> = ({
       syntheticInterference,
       profile,
     };
-    const r = generateRemedy(scans, banterText);
+    const r = generateRemedy(scans, banterText, sieve || undefined);
     setRemedy(r);
     setHistory((h) => [
       ...h,
@@ -62,6 +67,20 @@ const BanterCompute: React.FC<Props> = ({
   };
 
   const reset = () => { setRemedy(null); };
+
+  const onSieve = (ctx: SieveContext) => {
+    setSieve(ctx);
+    setPhase("compute");
+    // narrate the sieve back to the user as the Guide
+    const lines = ctx.explanations.length
+      ? ctx.explanations
+      : ["Clean context. No caffeine, sleep, stress, hydration, fasting, or medication overlay detected."];
+    setHistory((h) => [
+      ...h,
+      { role: "user", text: "(filled the Sieve)" },
+      { role: "oracle", text: "Reading the context first — " + lines.join(" ") + (ctx.demoteUrgency ? " I'll soften the alarm bell accordingly." : ctx.promoteUrgency ? " I'll widen the lens accordingly." : " I'll read the signals as they are.") },
+    ]);
+  };
 
   return (
     <div className="bo-banter" style={{ ["--accent" as any]: accent }} data-testid="step-banter">
@@ -76,7 +95,20 @@ const BanterCompute: React.FC<Props> = ({
         ))}
       </div>
 
-      {!remedy ? (
+      {phase === "sieve" && (
+        <BanterSieve
+          accent={accent}
+          vitals={{
+            hr: bloodPayload?.heartRate ?? 0,
+            bp: bloodPayload?.bpSystolic ?? 0,
+            asymmetry: bloodPayload?.asymmetry ?? 0,
+          }}
+          onComplete={onSieve}
+          onSkip={() => setPhase("compute")}
+        />
+      )}
+
+      {phase === "compute" && !remedy && (
         <>
           <textarea
             className="bo-banter-input"
@@ -86,12 +118,25 @@ const BanterCompute: React.FC<Props> = ({
             rows={3}
             data-testid="banter-input"
           />
+          {sieve && (
+            <div className="bo-sieve-summary" data-testid="sieve-summary">
+              <span className="ribbon">CONTEXT SHEET</span>
+              <ul>{sieve.explanations.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              <div className="gates">
+                <span className={`gate ${sieve.doctorAdvisable ? "on" : "off"}`}>{sieve.doctorAdvisable ? "doctor: advisable" : "doctor: not flagged"}</span>
+                <span className={`gate ${sieve.supplementAdvisable ? "on" : "off"}`}>{sieve.supplementAdvisable ? "supplements: ok" : "supplements: gated by meds"}</span>
+              </div>
+            </div>
+          )}
           <div className="bo-step-controls">
             <button className="bo-glass-btn primary" onClick={compute} data-testid="btn-banter-compute">Compute Remedy</button>
+            <button className="bo-glass-btn" onClick={() => setPhase("sieve")} data-testid="btn-banter-resieve">Re-Sieve</button>
             <button className="bo-glass-btn" onClick={onClose} data-testid="btn-banter-close">Close</button>
           </div>
         </>
-      ) : (
+      )}
+
+      {phase === "compute" && remedy && (
         <div className={`bo-remedy band-${remedy.band}`} data-testid="remedy-card">
           <div className="head">
             <span className="ribbon">REMEDY · {remedy.band.toUpperCase()}</span>
