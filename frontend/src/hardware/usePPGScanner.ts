@@ -35,6 +35,9 @@ export interface PPGState {
   permissionError: string | null;
   torchSupported: boolean;
   fps: number;
+  achievedFps: number;     // settled fps (rolling 30-frame mean)
+  requestedFps: number;    // what we asked the camera for
+  trackSettingsFps: number;// what the track reports it's actually delivering
   liveHeartRate: number;
   liveAmplitude: number;
   liveSignal: number[];   // last ~150 samples for sparkline
@@ -44,12 +47,15 @@ export interface PPGState {
   rawSamples: number[];
   /** Effective sample rate Hz */
   sampleRate: number;
+  /** True if rVFC (requestVideoFrameCallback) is in use — frame-locked sampling */
+  frameLocked: boolean;
   lastResult: PPGResult | null;
   elapsedSec: number;
 }
 
 const SAMPLE_WIN_SEC = 12;     // analysis window
-const TARGET_FPS = 30;
+const TARGET_FPS = 60;         // Push to max: S21 rear camera can do 60fps PPG
+const MIN_FPS = 30;            // Hard floor we still accept
 const MAX_SAMPLES = SAMPLE_WIN_SEC * TARGET_FPS;
 
 export function usePPGScanner(
@@ -61,12 +67,16 @@ export function usePPGScanner(
     permissionError: null,
     torchSupported: false,
     fps: 0,
+    achievedFps: 0,
+    requestedFps: TARGET_FPS,
+    trackSettingsFps: 0,
     liveHeartRate: 0,
     liveAmplitude: 0,
     liveSignal: [],
     lastBeatTs: 0,
     rawSamples: [],
     sampleRate: 30,
+    frameLocked: false,
     lastResult: null,
     elapsedSec: 0,
   });
@@ -75,16 +85,23 @@ export function usePPGScanner(
   const trackRef = useRef<MediaStreamTrack | null>(null);
   const samplesRef = useRef<PPGSample[]>([]);
   const rafRef = useRef<number | null>(null);
+  const rvfcHandleRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastFrameTsRef = useRef<number>(0);
   const startTsRef = useRef<number>(0);
   const lastPeakIndexRef = useRef<number>(-1);
+  const fpsRingRef = useRef<number[]>([]);
   const onBeatRef = useRef(onBeat);
   onBeatRef.current = onBeat;
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
+    // Cancel rVFC if registered
+    if (rvfcHandleRef.current !== null && videoRef.current && (videoRef.current as any).cancelVideoFrameCallback) {
+      try { (videoRef.current as any).cancelVideoFrameCallback(rvfcHandleRef.current); } catch (_) { /* ignore */ }
+      rvfcHandleRef.current = null;
+    }
     if (trackRef.current) {
       try {
         // turn off torch
@@ -97,25 +114,35 @@ export function usePPGScanner(
     }
     streamRef.current = null;
     trackRef.current = null;
-    setState((s) => ({ ...s, active: false }));
-  }, []);
+    fpsRingRef.current = [];
+    setState((s) => ({ ...s, active: false, frameLocked: false }));
+  }, [videoRef]);
 
   const start = useCallback(async () => {
     setState((s) => ({ ...s, permissionError: null, lastResult: null, liveSignal: [] }));
     samplesRef.current = [];
+    fpsRingRef.current = [];
     try {
+      // Request MAX frame rate — S21 rear camera supports 60fps for vascular pulse work
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 320 },
           height: { ideal: 240 },
-          frameRate: { ideal: TARGET_FPS, max: TARGET_FPS },
+          frameRate: { ideal: TARGET_FPS, min: MIN_FPS, max: TARGET_FPS },
         },
         audio: false,
       });
       streamRef.current = stream;
       const track = stream.getVideoTracks()[0];
       trackRef.current = track;
+
+      // Read what the camera actually committed to
+      let trackSettingsFps = 0;
+      try {
+        const settings: any = track.getSettings ? track.getSettings() : {};
+        trackSettingsFps = Math.round(settings.frameRate || 0);
+      } catch (_) { /* ignore */ }
 
       // Torch
       let torchSupported = false;
@@ -145,19 +172,25 @@ export function usePPGScanner(
 
       startTsRef.current = performance.now();
       lastFrameTsRef.current = startTsRef.current;
+
+      // Detect rVFC support — true frame-locked sampling (no fps loss to rAF)
+      const rvfcAvailable = typeof (videoRef.current as any)?.requestVideoFrameCallback === "function";
+
       setState((s) => ({
         ...s,
         active: true,
         torchSupported,
+        trackSettingsFps,
+        frameLocked: rvfcAvailable,
         elapsedSec: 0,
         fps: 0,
+        achievedFps: 0,
         liveHeartRate: 0,
         liveAmplitude: 0,
       }));
 
-      const tick = () => {
+      const processFrame = (now: number) => {
         if (!trackRef.current) return;
-        const now = performance.now();
         const video = videoRef.current;
         const canvas = canvasRef.current;
         if (video && canvas && video.readyState >= 2) {
@@ -183,11 +216,16 @@ export function usePPGScanner(
 
         const dt = now - lastFrameTsRef.current;
         lastFrameTsRef.current = now;
-        const fps = dt > 0 ? 1000 / dt : 0;
+        const instFps = dt > 0 ? 1000 / dt : 0;
+        // Rolling mean over last 30 frames for stability
+        fpsRingRef.current.push(instFps);
+        if (fpsRingRef.current.length > 30) fpsRingRef.current.shift();
+        const achievedFps =
+          fpsRingRef.current.reduce((a, b) => a + b, 0) / Math.max(1, fpsRingRef.current.length);
         const elapsed = (now - startTsRef.current) / 1000;
 
         // Live analysis every ~10 frames once we have ≥3s of data
-        if (samplesRef.current.length > TARGET_FPS * 3 && samplesRef.current.length % 8 === 0) {
+        if (samplesRef.current.length > MIN_FPS * 3 && samplesRef.current.length % 8 === 0) {
           const live = analysePPG(samplesRef.current);
           // Beat detection: if the live result reports a heart rate and the
           // newest peak is past our previous index, fire onBeat (for haptics).
@@ -197,44 +235,63 @@ export function usePPGScanner(
           const a = arr[arr.length - 3]?.red ?? 0;
           const b = arr[arr.length - 2]?.red ?? 0;
           const c = arr[arr.length - 1]?.red ?? 0;
-          if (b > a && b > c && newPeakIdx - lastPeakIndexRef.current > Math.round(TARGET_FPS * 0.35) && live.heartRate > 30) {
+          const minBeatGap = Math.max(8, Math.round(achievedFps * 0.35));
+          if (b > a && b > c && newPeakIdx - lastPeakIndexRef.current > minBeatGap && live.heartRate > 30) {
             lastPeakIndexRef.current = newPeakIdx;
             if (onBeatRef.current) onBeatRef.current();
             setState((s) => ({
               ...s,
-              fps,
+              fps: instFps,
+              achievedFps,
               elapsedSec: elapsed,
               liveHeartRate: live.heartRate,
               liveAmplitude: live.signalAmplitude,
               liveSignal: samplesRef.current.slice(-150).map((p) => p.red),
               lastBeatTs: Date.now(),
               rawSamples: samplesRef.current.map((p) => p.red),
-              sampleRate: fps,
+              sampleRate: achievedFps,
             }));
           } else {
             setState((s) => ({
               ...s,
-              fps,
+              fps: instFps,
+              achievedFps,
               elapsedSec: elapsed,
               liveHeartRate: live.heartRate,
               liveAmplitude: live.signalAmplitude,
               liveSignal: samplesRef.current.slice(-150).map((p) => p.red),
               rawSamples: samplesRef.current.map((p) => p.red),
-              sampleRate: fps,
+              sampleRate: achievedFps,
             }));
           }
         } else {
           setState((s) => ({
             ...s,
-            fps,
+            fps: instFps,
+            achievedFps,
             elapsedSec: elapsed,
             liveSignal: samplesRef.current.slice(-150).map((p) => p.red),
           }));
         }
-
-        rafRef.current = requestAnimationFrame(tick);
       };
-      rafRef.current = requestAnimationFrame(tick);
+
+      if (rvfcAvailable && videoRef.current) {
+        // Frame-locked sampling — one sample per actual decoded video frame
+        const rvfcTick = (_now: number, meta: any) => {
+          // meta.mediaTime is monotonic seconds for the frame; we use perf.now for consistency w/ fps math
+          processFrame(performance.now());
+          if (trackRef.current && videoRef.current) {
+            rvfcHandleRef.current = (videoRef.current as any).requestVideoFrameCallback(rvfcTick);
+          }
+        };
+        rvfcHandleRef.current = (videoRef.current as any).requestVideoFrameCallback(rvfcTick);
+      } else {
+        const tick = () => {
+          processFrame(performance.now());
+          rafRef.current = requestAnimationFrame(tick);
+        };
+        rafRef.current = requestAnimationFrame(tick);
+      }
     } catch (e: any) {
       setState((s) => ({
         ...s,
@@ -245,7 +302,7 @@ export function usePPGScanner(
   }, [videoRef]);
 
   const finalize = useCallback((): PPGResult | null => {
-    if (samplesRef.current.length < TARGET_FPS * 3) return null;
+    if (samplesRef.current.length < MIN_FPS * 3) return null;
     const result = analysePPG(samplesRef.current);
     setState((s) => ({ ...s, lastResult: result }));
     return result;

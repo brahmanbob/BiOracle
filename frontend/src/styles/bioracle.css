@@ -1888,6 +1888,77 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; color: var(--gold
 
 
 /* ================================================================
+   V14.4 — Sensor Integration readouts (functional only)
+   ================================================================ */
+
+.bo-mag-gate {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(207,207,217,0.06);
+  border-left: 3px solid #cfcfd9;
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  gap: 6px 12px;
+  align-items: baseline;
+  font-family: var(--font-mono); font-size: 10px;
+  color: #c8c8d2;
+}
+.bo-mag-gate .lbl { color: var(--gold-mid); letter-spacing: 0.18em; }
+.bo-mag-gate .val { color: #ffffff; font-weight: 700; letter-spacing: 0.12em; }
+.bo-mag-gate .msg { grid-column: 1 / -1; color: #b8b8c4; font-style: italic; }
+.bo-mag-gate .meta { grid-column: 1 / -1; color: #8a8a96; }
+.bo-mag-gate[data-status="clear"]        { border-left-color: #9ad88a; }
+.bo-mag-gate[data-status="clear"] .val   { color: #9ad88a; }
+.bo-mag-gate[data-status="settling"]     { border-left-color: #f5a623; }
+.bo-mag-gate[data-status="settling"] .val{ color: #f5a623; }
+.bo-mag-gate[data-status="interference"] { border-left-color: #ff5b50; }
+.bo-mag-gate[data-status="interference"] .val { color: #ff5b50; }
+.bo-mag-gate[data-status="unavailable"]  { border-left-color: #8a8a96; }
+.bo-mag-gate[data-status="permission"]   { border-left-color: #ff5b50; }
+.bo-mag-gate button { margin-top: 4px; grid-column: 1 / -1; justify-self: start; }
+
+.bo-fps-readout {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: #b4a394;
+  background: rgba(0,0,0,0.4);
+  border-radius: 6px;
+  border-left: 3px solid var(--gold-mid);
+  letter-spacing: 0.04em;
+}
+
+.bo-breath-readout {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(212,175,55,0.25);
+  display: grid; gap: 4px;
+}
+.bo-breath-readout .row,
+.bo-breath-result .row {
+  display: grid; grid-template-columns: 130px 1fr;
+  gap: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: #b4a394;
+}
+.bo-breath-readout .row b,
+.bo-breath-result .row b { color: var(--gold-bright); }
+.bo-breath-result {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(154,216,138,0.05);
+  border: 1px solid rgba(154,216,138,0.3);
+  display: grid; gap: 4px;
+}
+.bo-breath-result .row b { color: #9ad88a; }
+
+
+
+/* ================================================================
    V14.3 — The Core (No-BS Ocular) · The Sieve · Sentry Pulse
    ================================================================ */
 

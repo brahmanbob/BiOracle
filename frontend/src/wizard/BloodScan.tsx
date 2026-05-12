@@ -3,6 +3,7 @@ import { usePPGScanner } from "@/hardware/usePPGScanner";
 import { computeVascularAge } from "@/lib/vascularAge";
 import { deriveOcularPanel, loadBPCalibration, saveBPCalibration, clearBPCalibration } from "@/lib/ocularVitals";
 import OcularPanel from "@/components/OcularPanel";
+import { useMagnetometerGate } from "@/hardware/useMagnetometerGate";
 
 interface Props {
   onComplete: (payload: {
@@ -25,10 +26,26 @@ interface Props {
 const BloodScan: React.FC<Props> = ({ onComplete, onSkip, accent, haptic }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const ppg = usePPGScanner(videoRef, haptic);
+  const gate = useMagnetometerGate();
+  const [gateBypassed, setGateBypassed] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [calSbp, setCalSbp] = useState(120);
   const [calDbp, setCalDbp] = useState(78);
   const [hasCal, setHasCal] = useState<boolean>(() => !!loadBPCalibration());
+
+  const gateClear =
+    gate.report.status === "clear" ||
+    gate.report.status === "unavailable" ||  // can't enforce if sensor missing — allow
+    gateBypassed;
+
+  const startScan = async () => {
+    // Always run a fresh magnetometer probe before scanning
+    const r = await gate.probe();
+    if (r.status === "clear" || r.status === "unavailable" || gateBypassed) {
+      await ppg.start();
+    }
+    // Otherwise: UI surfaces gate status and the user must Bypass / move / retry
+  };
 
   // auto-finalize at 12 s
   useEffect(() => {
@@ -131,7 +148,16 @@ const BloodScan: React.FC<Props> = ({ onComplete, onSkip, accent, haptic }) => {
 
       <div className="bo-step-controls">
         {!ppg.state.active ? (
-          <button className="bo-glass-btn primary" onClick={ppg.start} data-testid="btn-blood-start">Begin Scan</button>
+          <button
+            className="bo-glass-btn primary"
+            onClick={startScan}
+            disabled={gate.report.status === "settling"}
+            data-testid="btn-blood-start"
+          >
+            {gate.report.status === "idle" ? "Begin Scan" :
+             gate.report.status === "settling" ? "Probing field…" :
+             gateClear ? "Begin Scan" : "Re-probe"}
+          </button>
         ) : !ppg.state.lastResult ? (
           <button className="bo-glass-btn" disabled data-testid="btn-blood-scanning">Scanning {ppg.state.elapsedSec.toFixed(1)}s</button>
         ) : (

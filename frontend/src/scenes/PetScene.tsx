@@ -1,5 +1,6 @@
 import React from "react";
 import { usePetAcoustic, type PetSpecies } from "@/hardware/usePetAcoustic";
+import { useMagnetometerGate } from "@/hardware/useMagnetometerGate";
 
 interface Props {
   accent: string;
@@ -94,9 +95,30 @@ const PetScene: React.FC<Props> = ({ accent, onClose }) => {
 
           {pet.state.permissionError && <p className="bo-error">⚠︎ {pet.state.permissionError}</p>}
 
+          <div className="bo-mag-gate" data-testid="pet-mag-gate" data-status={gate.report.status}>
+            <span className="lbl">⌖ MAG-GATE</span>
+            <span className="val">{gate.report.status.toUpperCase()}</span>
+            <span className="msg">{gate.report.message}</span>
+            {gate.report.samples > 0 && (
+              <span className="meta">
+                n={gate.report.samples} · mean={gate.report.meanMicrotesla}µT · peak={gate.report.peakMicrotesla}µT · spikes={gate.report.recentSpikes}
+              </span>
+            )}
+            {(gate.report.status === "interference" || gate.report.status === "permission") && (
+              <button className="bo-glass-btn" onClick={() => setBypassed(true)} data-testid="btn-pet-mag-bypass">Bypass gate</button>
+            )}
+          </div>
+
           <div className="bo-step-controls">
             {!pet.state.active ? (
-              <button className="bo-glass-btn primary" onClick={pet.start} data-testid="btn-pet-start">Open Mic Watch</button>
+              <button
+                className="bo-glass-btn primary"
+                onClick={startScan}
+                disabled={gate.report.status === "settling"}
+                data-testid="btn-pet-start"
+              >
+                {gate.report.status === "settling" ? "Probing field…" : gateClear ? "Open Mic Watch" : "Re-probe"}
+              </button>
             ) : (
               <button className="bo-glass-btn" onClick={pet.stop} data-testid="btn-pet-stop">■ Stop</button>
             )}

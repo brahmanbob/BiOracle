@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import RetinolScan from "@/wizard/RetinolScan";
 import TongueScan from "@/wizard/TongueScan";
 import BloodScan from "@/wizard/BloodScan";
+import BreathScan from "@/wizard/BreathScan";
 import BanterCompute from "@/wizard/BanterCompute";
 import LightCalibrationGate from "@/components/LightCalibrationGate";
 import type { LightCalibration } from "@/lib/lightCalibration";
@@ -19,7 +20,7 @@ interface Props {
   profile?: "sovereign" | "cruise" | "beauty" | "pet" | "baby" | "guardian";
 }
 
-type Step = "retinol" | "tongue" | "blood" | "banter";
+type Step = "retinol" | "tongue" | "blood" | "breath" | "banter";
 
 interface BloodPayload {
   heartRate: number; hrv: number; asymmetry: number; amplitude: number;
@@ -27,11 +28,14 @@ interface BloodPayload {
   bpSystolic?: number; bpDiastolic?: number; spo2?: number; signalQuality?: number;
 }
 
+interface BreathPayload { duration: number; intensity: number; evenness: number; frames: number; }
+
 const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfMicrotesla, syntheticInterference, haptic, pdfPrint, profile }) => {
   const [step, setStep] = useState<Step>("retinol");
   const [sclera, setSclera] = useState<ScleraReading | null>(null);
   const [tongue, setTongue] = useState<TongueReading | null>(null);
   const [blood, setBlood] = useState<BloodPayload | undefined>(undefined);
+  const [breath, setBreath] = useState<BreathPayload | undefined>(undefined);
   const [lightCal, setLightCal] = useState<LightCalibration | null>(null);
   const [calibrated, setCalibrated] = useState<boolean>(false);
   const [morning, setMorning] = useState<boolean>(() => {
@@ -40,7 +44,7 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
   });
 
   const lighting = morning ? "morning" : "indoor";
-  const steps: Step[] = ["retinol", "tongue", "blood", "banter"];
+  const steps: Step[] = ["retinol", "tongue", "blood", "breath", "banter"];
 
   return (
     <div className="bo-immersion" style={{ ["--accent" as any]: accent }} data-testid="medical-immersion">
@@ -108,7 +112,14 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
           <BloodScan
             accent={accent}
             haptic={haptic}
-            onComplete={(p) => { setBlood(p); setStep("banter"); }}
+            onComplete={(p) => { setBlood(p); setStep("breath"); }}
+            onSkip={() => setStep("breath")}
+          />
+        )}
+        {step === "breath" && (
+          <BreathScan
+            accent={accent}
+            onComplete={(p) => { setBreath(p); setStep("banter"); }}
             onSkip={() => setStep("banter")}
           />
         )}
@@ -123,7 +134,7 @@ const MedicalRitual: React.FC<Props> = ({ accent, onClose, lectinSignature, emfM
             syntheticInterference={syntheticInterference}
             profile={profile}
             onPdf={pdfPrint ? async (remedy: RemedyCard) => {
-              await pdfPrint({ sclera, tongue, blood, remedy });
+              await pdfPrint({ sclera, tongue, blood, breath, remedy });
             } : undefined}
             onClose={onClose}
           />
