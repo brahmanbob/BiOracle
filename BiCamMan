@@ -1,0 +1,88 @@
+package com.bioracle.rppg
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+/**
+ * Manages camera lifecycle and 60fps configuration for S21
+ */
+class BiOracleCameraManager(
+    private val context: Context,
+    private val lifecycleOwner: LifecycleOwner,
+    private val onBiometricUpdate: (BiometricData) -> Unit
+) {
+    private var cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var imageAnalysis: ImageAnalysis? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var rppgProcessor = RPPGProcessor(fps = 60.0, windowSize = 300)
+    
+    fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        
+        cameraProviderFuture.addListener({
+            cameraProvider = cameraProviderFuture.get()
+            
+            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+            
+            // Request 60fps specifically for S21 sensor
+            val analysisConfig = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setTargetFrameRate(60)
+                .build()
+            
+            val analyzer = CameraAnalyzer(rppgProcessor) { hrvResult ->
+                val biometricData = hrvToBiometricData(hrvResult)
+                onBiometricUpdate(biometricData)
+            }
+            
+            imageAnalysis = analysisConfig
+            imageAnalysis?.setAnalyzer(cameraExecutor, analyzer)
+            
+            try {
+                cameraProvider?.unbindAll()
+                cameraProvider?.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    imageAnalysis
+                )
+                Log.d("BiOracle", "Camera started at 60fps target")
+            } catch (e: Exception) {
+                Log.e("BiOracle", "Camera bind failed: ${e.message}")
+            }
+            
+        }, ContextCompat.getMainExecutor(context))
+    }
+    
+    fun stopCamera() {
+        cameraProvider?.unbindAll()
+        cameraExecutor.shutdown()
+        rppgProcessor.reset()
+        Log.d("BiOracle", "Camera stopped")
+    }
+    
+    fun requestCameraPermissions(activity: android.app.Activity): Boolean {
+        val permissions = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO  // For frequency validation
+        )
+        
+        val missingPermissions = permissions.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+        
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(activity, missingPermissions.toTypedArray(), 1001)
+            return false
+        }
+        return true
+    }
+}
