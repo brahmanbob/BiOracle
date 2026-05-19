@@ -1,0 +1,31 @@
+class MainActivity : AppCompatActivity() {
+    private lateinit var cameraManager: BiOracleCameraManager
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        cameraManager = BiOracleCameraManager(
+            context = this,
+            lifecycleOwner = this,
+            onBiometricUpdate = { biometricData ->
+                runOnUiThread {
+                    // Send to your TypeScript SovereignLogic via WebView or bridge
+                    updateUIWithBiometrics(biometricData)
+                }
+            }
+        )
+        
+        if (cameraManager.requestCameraPermissions(this)) {
+            cameraManager.startCamera()
+        }
+    }
+    
+    override fun onRequestPermissionsResult(...) {
+        // Handle permissions, then cameraManager.startCamera()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraManager.stopCamera()
+    }
+}
