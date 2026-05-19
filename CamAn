@@ -1,0 +1,137 @@
+package com.bioracle.rppg
+
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import androidx.camera.core.*
+import androidx.camera.core.ImageAnalysis.COORDINATE_SYSTEM_ORIGINAL
+import java.nio.ByteBuffer
+import kotlin.math.*
+
+/**
+ * CameraX Analyzer for Samsung S21 60fps rPPG capture
+ * Extracts mean RGB from facial ROI at 60fps
+ */
+class CameraAnalyzer(
+    private val processor: RPPGProcessor,
+    private val onBiometricUpdate: (HRVResult) -> Unit
+) : ImageAnalysis.Analyzer {
+    
+    private var frameCounter = 0
+    private val fpsLogInterval = 60  // Log actual FPS every 60 frames
+    
+    // Default ROI: Center 50% of frame (assumes face is centered)
+    private var roiRect = Rect()
+    
+    override fun analyze(imageProxy: ImageProxy) {
+        val frameTimeNs = imageProxy.imageInfo?.timestamp ?: 0L
+        
+        // Track actual frame rate
+        frameCounter++
+        if (frameCounter % fpsLogInterval == 0) {
+            android.util.Log.d("BiOracle", "Processing frame $frameCounter at ${frameTimeNs}ns")
+        }
+        
+        try {
+            val frame = imageProxy.image ?: return
+            
+            // Get ROI - adjust these coordinates based on face detection
+            // Default: use center 40% of frame (where face typically is)
+            if (roiRect.width() == 0) {
+                val width = imageProxy.width
+                val height = imageProxy.height
+                val roiSize = min(width, height) * 0.4  // 40% of smaller dimension
+                val left = (width - roiSize) / 2
+                val top = (height - roiSize) / 3  // Bias toward upper third (eyes/forehead)
+                val right = left + roiSize
+                val bottom = top + roiSize
+                roiRect.set(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+            }
+            
+            // Extract mean RGB from ROI
+            val rgbMeans = extractRgbMeans(frame, roiRect)
+            
+            // Send to RPPG processor
+            processor.processFrame(rgbMeans)
+            
+            // Attempt extraction every 300 frames (5 seconds at 60fps)
+            if (frameCounter % 300 == 0) {
+                val bvpSignal = processor.extractBVPSignal()
+                if (bvpSignal != null) {
+                    val hrvResult = processor.computeHRVMetrics(bvpSignal)
+                    if (hrvResult.hr > 0.0 && hrvResult.hr < 220.0) {
+                        // Valid heart rate detected
+                        onBiometricUpdate(hrvResult)
+                        
+                        android.util.Log.d("BiOracle", "HR: ${hrvResult.hr.toInt()} BPM | RMSSD: ${hrvResult.rmssd.toInt()} ms")
+                    }
+                }
+            }
+            
+        } catch (e: Exception) {
+            android.util.Log.e("BiOracle", "Frame analysis failed: ${e.message}")
+        } finally {
+            imageProxy.close()
+        }
+    }
+    
+    /**
+     * Extract mean RGB values from ROI in YUV_420_888 frame
+     * Converts to RGB and spatial averages
+     */
+    private fun extractRgbMeans(
+        image: android.media.Image, 
+        roi: Rect
+    ): Triple<Double, Double, Double> {
+        // Get YUV planes
+        val yPlane = image.planes[0]  // Luminance
+        val uPlane = image.planes[1]  // Chrominance U (Cb)
+        val vPlane = image.planes[2]  // Chrominance V (Cr)
+        
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+        
+        val yRowStride = yPlane.rowStride
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+        
+        val yPixelStride = yPlane.pixelStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
+        
+        var sumR = 0.0
+        var sumG = 0.0
+        var sumB = 0.0
+        var pixelCount = 0
+        
+        // Sample within ROI (downsample for performance - stride 2)
+        for (y in roi.top until roi.bottom step 2) {
+            val yRowOffset = y * yRowStride
+            val uRowOffset = y / 2 * uRowStride  // UV planes are subsampled
+            val vRowOffset = y / 2 * vRowStride
+            
+            for (x in roi.left until roi.right step 2) {
+                // Extract YUV values
+                val yValue = yBuffer.get(yRowOffset + x * yPixelStride).toInt() and 0xFF
+                val uValue = uBuffer.get(uRowOffset + (x / 2) * uPixelStride).toInt() and 0xFF
+                val vValue = vBuffer.get(vRowOffset + (x / 2) * vPixelStride).toInt() and 0xFF
+                
+                // YUV to RGB conversion (standard BT.601)
+                val r = (yValue + 1.402 * (vValue - 128)).coerceIn(0.0, 255.0)
+                val g = (yValue - 0.344 * (uValue - 128) - 0.714 * (vValue - 128)).coerceIn(0.0, 255.0)
+                val b = (yValue + 1.772 * (uValue - 128)).coerceIn(0.0, 255.0)
+                
+                sumR += r
+                sumG += g
+                sumB += b
+                pixelCount++
+            }
+        }
+        
+        val meanR = if (pixelCount > 0) sumR / pixelCount else 0.0
+        val meanG = if (pixelCount > 0) sumG / pixelCount else 0.0
+        val meanB = if (pixelCount > 0) sumB / pixelCount else 0.0
+        
+        return Triple(meanR, meanG, meanB)
+    }
+}
