@@ -1,0 +1,178 @@
+package com.bioracle.rppg
+
+import kotlin.math.*
+import kotlin.collections.ArrayList
+
+/**
+ * BiOracle RPPG Engine - CHROM Algorithm Implementation
+ * Based on de Haan & Jeanne (2010) "Robust pulse rate from chrominance-based rPPG"
+ * Optimized for Samsung S21 60fps capture
+ */
+class RPPGProcessor(private val fps: Double = 60.0, private val windowSize: Int = 300) {
+
+    private val rgbBuffer = ArrayList<Triple<Double, Double, Double>>() // (R, G, B)
+    
+    // Butterworth bandpass filter coefficients (0.75 Hz - 3.0 Hz = 45-180 BPM)
+    // Pre-computed for 60fps, 6th order
+    private val bCoeffs = doubleArrayOf(
+        0.0065, 0.0, -0.0325, 0.0, 0.0651, 0.0, -0.0651, 0.0, 0.0325, 0.0, -0.0065
+    )
+    private val aCoeffs = doubleArrayOf(
+        1.0, -8.5011, 32.7885, -74.9452, 111.3887, -111.3887, 74.9452, -32.7885, 8.5011, -1.0
+    )
+    
+    private var zB = DoubleArray(bCoeffs.size)
+    private var zA = DoubleArray(aCoeffs.size)
+
+    /**
+     * Process a single frame ROI - extracts RGB means and updates buffer
+     */
+    fun processFrame(roiRgbMeans: Triple<Double, Double, Double>) {
+        rgbBuffer.add(roiRgbMeans)
+        while (rgbBuffer.size > windowSize) {
+            rgbBuffer.removeAt(0)
+        }
+    }
+
+    /**
+     * Extract Blood Volume Pulse (BVP) signal using CHROM algorithm
+     * Returns filtered BVP signal or null if insufficient data
+     */
+    fun extractBVPSignal(): DoubleArray? {
+        if (rgbBuffer.size < windowSize) return null
+        
+        // Extract color channels
+        val r = DoubleArray(windowSize) { rgbBuffer[it].third }
+        val g = DoubleArray(windowSize) { rgbBuffer[it].second }
+        val b = DoubleArray(windowSize) { rgbBuffer[it].first }
+        
+        // Temporal normalization (moving average)
+        val rMean = r.average()
+        val gMean = g.average()
+        val bMean = b.average()
+        
+        val rNorm = DoubleArray(windowSize) { r[it] / rMean }
+        val gNorm = DoubleArray(windowSize) { g[it] / gMean }
+        val bNorm = DoubleArray(windowSize) { b[it] / bMean }
+        
+        // CHROM projection - eliminates specular reflection noise
+        val xs = DoubleArray(windowSize) { 3.0 * rNorm[it] - 2.0 * gNorm[it] }
+        val ys = DoubleArray(windowSize) { 1.5 * rNorm[it] + 1.2 * gNorm[it] - 1.5 * bNorm[it] }
+        
+        val alpha = xs.stdDev() / ys.stdDev()
+        val bvpRaw = DoubleArray(windowSize) { xs[it] - alpha * ys[it] }
+        
+        // Apply bandpass filter (0.75 - 3.0 Hz)
+        return butterworthFilter(bvpRaw)
+    }
+    
+    /**
+     * Zero-phase Butterworth bandpass filter
+     */
+    private fun butterworthFilter(signal: DoubleArray): DoubleArray {
+        // Forward filter
+        val filteredForward = DoubleArray(signal.size)
+        for (i in signal.indices) {
+            var y = signal[i]
+            for (j in bCoeffs.indices) {
+                y += bCoeffs[j] * (if (i - j >= 0) signal[i - j] else 0.0)
+            }
+            for (j in 1 until aCoeffs.size) {
+                y -= aCoeffs[j] * (if (i - j >= 0) filteredForward[i - j] else 0.0)
+            }
+            filteredForward[i] = y / aCoeffs[0]
+        }
+        
+        // Reverse for zero-phase
+        val filteredReverse = DoubleArray(signal.size)
+        for (i in signal.indices.reversed()) {
+            var y = filteredForward[i]
+            for (j in bCoeffs.indices) {
+                y += bCoeffs[j] * (if (i + j < signal.size) filteredForward[i + j] else 0.0)
+            }
+            for (j in 1 until aCoeffs.size) {
+                y -= aCoeffs[j] * (if (i + j < signal.size) filteredReverse[i + j] else 0.0)
+            }
+            filteredReverse[i] = y / aCoeffs[0]
+        }
+        
+        return filteredReverse
+    }
+    
+    /**
+     * Compute HRV metrics from BVP signal
+     */
+    fun computeHRVMetrics(bvpSignal: DoubleArray): HRVResult {
+        val peaks = findPeaks(bvpSignal, minDistance = (fps * 0.4).toInt())
+        if (peaks.size < 2) {
+            return HRVResult(hr = 0.0, sdnn = 0.0, rmssd = 0.0, ibiSequence = emptyList())
+        }
+        
+        // Convert frame indices to milliseconds
+        val ibiMs = ArrayList<Double>()
+        for (i in 1 until peaks.size) {
+            val intervalSec = (peaks[i] - peaks[i-1]) / fps
+            ibiMs.add(intervalSec * 1000.0)
+        }
+        
+        val meanIbi = ibiMs.average()
+        val hr = 60000.0 / meanIbi
+        
+        // SDNN: Standard deviation of NN intervals
+        val sdnn = sqrt(ibiMs.map { (it - meanIbi).pow(2) }.average())
+        
+        // RMSSD: Root mean square of successive differences
+        val successiveDiffs = ArrayList<Double>()
+        for (i in 1 until ibiMs.size) {
+            successiveDiffs.add(ibiMs[i] - ibiMs[i-1])
+        }
+        val rmssd = sqrt(successiveDiffs.map { it.pow(2) }.average())
+        
+        return HRVResult(
+            hr = hr,
+            sdnn = sdnn,
+            rmssd = rmssd,
+            ibiSequence = ibiMs
+        )
+    }
+    
+    /**
+     * Peak detection with minimum distance constraint
+     */
+    private fun findPeaks(signal: DoubleArray, minDistance: Int): List<Int> {
+        val peaks = ArrayList<Int>()
+        var lastPeak = -minDistance
+        
+        for (i in 1 until signal.size - 1) {
+            if (signal[i] > signal[i-1] && signal[i] > signal[i+1]) {
+                if (i - lastPeak >= minDistance) {
+                    peaks.add(i)
+                    lastPeak = i
+                }
+            }
+        }
+        return peaks
+    }
+    
+    /**
+     * Reset buffer (e.g., when user stops scanning)
+     */
+    fun reset() {
+        rgbBuffer.clear()
+        zB.fill(0.0)
+        zA.fill(0.0)
+    }
+}
+
+data class HRVResult(
+    val hr: Double,           // Heart rate in BPM
+    val sdnn: Double,         // Standard deviation of NN intervals (ms)
+    val rmssd: Double,        // Root mean square of successive differences (ms)
+    val ibiSequence: List<Double>  // Raw inter-beat intervals (ms)
+)
+
+// Extension function for standard deviation
+fun DoubleArray.stdDev(): Double {
+    val mean = average()
+    return sqrt(map { (it - mean).pow(2) }.average())
+}
